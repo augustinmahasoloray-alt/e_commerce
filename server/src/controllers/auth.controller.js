@@ -20,6 +20,7 @@ export const register = async (req, res, next) => {
 
         res.status(201).json({
             succes: true,
+            token,
             user: { id: user.id, email: user.email, nom: user.nom, prenom: user.prenom, role: user.role },
         });
     } catch (error) {
@@ -40,7 +41,7 @@ export const login = async (req, res, next) => {
             })
         }
 
-        const isMatch = await comparePassword(password, mot_de_passe_hash);
+        const isMatch = await comparePassword(password, user.mot_de_passe_hash);
         if (!isMatch) {
             return res.status(401).json({
                 success: false,
