@@ -1,3 +1,4 @@
+import authRoutes from "./routes/auth.routes.js"
 import express from "express";
 import cors from "cors";
 import errorMiddleware from "./middlewares/error.middleware.js";
@@ -7,7 +8,7 @@ app.use(cors())
 app.use(express.json())
 
 //code d'api
-
+app.use("/api/auth", authRoutes);
 
 
 
