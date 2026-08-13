@@ -16,7 +16,15 @@ datasource db {
 
 enum Role {
   client
+  vendeur
   admin
+}
+
+enum VendorStatus {
+  en_attente
+  valide
+  suspendu
+  rejete
 }
 
 enum OrderStatus {
@@ -38,6 +46,19 @@ enum CouponType {
   montant_fixe
 }
 
+enum TransactionType {
+  credit_vente
+  debit_commission
+  versement
+  ajustement
+}
+
+enum TransactionStatus {
+  en_attente
+  effectue
+  echoue
+}
+
 // ============ USERS & ADDRESSES ============
 
 model User {
@@ -55,6 +76,7 @@ model User {
   orders    Order[]
   reviews   Review[]
   wishlist  Wishlist[]
+  vendor    Vendor?
 
   @@map("users")
 }
@@ -73,6 +95,58 @@ model Address {
   orders Order[]
 
   @@map("addresses")
+}
+
+// ============ VENDORS ============
+// Un vendeur = un compte User (role = vendeur) + un profil boutique.
+// La relation 1-1 permet de garder l'auth centralisée sur User
+// tout en isolant les infos commerciales du vendeur.
+
+model Vendor {
+  id               String       @id @default(uuid())
+  user_id          String       @unique
+  nom_boutique     String
+  slug             String       @unique
+  description      String?
+  logo_url         String?
+  telephone_pro    String?
+  // Infos de règlement (MVola / Orange Money / autre) — stockées
+  // en clair ici pour la V1, à chiffrer/segmenter si besoin plus tard.
+  moyen_paiement   String?
+  numero_paiement  String?
+  taux_commission  Decimal      @default(10.00) @db.Decimal(5, 2) // en %
+  statut           VendorStatus @default(en_attente)
+  date_creation    DateTime     @default(now())
+  date_validation  DateTime?
+
+  user          User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  products      Product[]
+  vendorOrders  VendorOrder[]
+  transactions  VendorTransaction[]
+
+  @@map("vendors")
+}
+
+// Ledger simple des mouvements financiers d'un vendeur.
+// Permet de calculer son solde par simple somme (credit - debit)
+// sans dépendre d'un vrai split-payment côté provider (MVola/OM
+// ne le supportent pas nativement) : la plateforme encaisse le
+// paiement client en une fois, puis crédite le vendeur ici.
+model VendorTransaction {
+  id              String             @id @default(uuid())
+  vendor_id       String
+  vendor_order_id String?
+  type            TransactionType
+  statut          TransactionStatus  @default(en_attente)
+  montant         Decimal            @db.Decimal(10, 2)
+  description     String?
+  date_creation   DateTime           @default(now())
+  date_traitement DateTime?
+
+  vendor      Vendor       @relation(fields: [vendor_id], references: [id], onDelete: Cascade)
+  vendorOrder VendorOrder? @relation(fields: [vendor_order_id], references: [id])
+
+  @@map("vendor_transactions")
 }
 
 // ============ CATEGORIES & BRANDS ============
@@ -103,6 +177,7 @@ model Brand {
 
 model Product {
   id            String   @id @default(uuid())
+  vendor_id     String
   nom           String
   description   String?
   category_id   String
@@ -113,6 +188,7 @@ model Product {
   actif         Boolean  @default(true)
   date_creation DateTime @default(now())
 
+  vendor   Vendor           @relation(fields: [vendor_id], references: [id], onDelete: Cascade)
   category Category         @relation(fields: [category_id], references: [id])
   brand    Brand            @relation(fields: [brand_id], references: [id])
   variants ProductVariant[]
@@ -150,6 +226,8 @@ model ProductImage {
 }
 
 // ============ CART ============
+// Inchangé : le panier reste multi-vendeurs par nature,
+// le split se fait uniquement au moment de la commande.
 
 model Cart {
   id      String @id @default(uuid())
@@ -189,35 +267,57 @@ model Wishlist {
 }
 
 // ============ ORDERS ============
+// Order = la commande "client" globale (1 paiement, 1 adresse, 1 coupon).
+// VendorOrder = la déclinaison par vendeur (1 commande client peut
+// générer plusieurs VendorOrder si le panier contient plusieurs boutiques).
+// C'est VendorOrder qui porte le statut de traitement/livraison réel,
+// puisque chaque vendeur gère sa propre expédition indépendamment.
 
 model Order {
   id              String      @id @default(uuid())
   user_id         String
   address_id      String
   coupon_id       String?
-  statut          OrderStatus @default(en_attente)
   mode_paiement   String
   mode_livraison  String
   montant_total   Decimal     @db.Decimal(10, 2)
   date_commande   DateTime    @default(now())
 
-  user    User        @relation(fields: [user_id], references: [id])
-  address Address     @relation(fields: [address_id], references: [id])
-  coupon  Coupon?     @relation(fields: [coupon_id], references: [id])
-  items   OrderItem[]
+  user         User          @relation(fields: [user_id], references: [id])
+  address      Address       @relation(fields: [address_id], references: [id])
+  coupon       Coupon?       @relation(fields: [coupon_id], references: [id])
+  vendorOrders VendorOrder[]
 
   @@map("orders")
 }
 
-model OrderItem {
-  id             String  @id @default(uuid())
-  order_id       String
-  variant_id     String
-  quantite       Int
-  prix_unitaire  Decimal @db.Decimal(10, 2)
+model VendorOrder {
+  id                 String      @id @default(uuid())
+  order_id           String
+  vendor_id          String
+  statut             OrderStatus @default(en_attente)
+  montant_total      Decimal     @db.Decimal(10, 2) // somme des OrderItem de ce vendeur
+  montant_commission Decimal     @db.Decimal(10, 2) // part plateforme
+  montant_net        Decimal     @db.Decimal(10, 2) // ce que touche le vendeur
+  date_maj           DateTime    @updatedAt
 
-  order   Order          @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  variant ProductVariant @relation(fields: [variant_id], references: [id])
+  order        Order               @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  vendor       Vendor              @relation(fields: [vendor_id], references: [id])
+  items        OrderItem[]
+  transactions VendorTransaction[]
+
+  @@map("vendor_orders")
+}
+
+model OrderItem {
+  id              String  @id @default(uuid())
+  vendor_order_id String
+  variant_id      String
+  quantite        Int
+  prix_unitaire   Decimal @db.Decimal(10, 2)
+
+  vendorOrder VendorOrder    @relation(fields: [vendor_order_id], references: [id], onDelete: Cascade)
+  variant     ProductVariant @relation(fields: [variant_id], references: [id])
 
   @@map("order_items")
 }
