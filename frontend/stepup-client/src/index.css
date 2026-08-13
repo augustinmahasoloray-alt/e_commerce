@@ -50,8 +50,8 @@
   --color-background: #FAFAF9;
   --color-surface: #FFFFFF;
   --color-text: #111827;
-  --color-accent: #4FD1C5;
-  --color-muted: #64748B;
+  --color-accent: #e09f3e;
+  --color-muted: #03045e;
 }
 
 /* ============ COULEURS — DARK ============ */
@@ -62,7 +62,7 @@
   --color-background: #0B0B0B;
   --color-surface: #161616;
   --color-text: #F5F5F5;
-  --color-accent: #4FD1C5;
+  --color-accent: #e09f3e;
   --color-muted: #A0AEC0;
 }
 

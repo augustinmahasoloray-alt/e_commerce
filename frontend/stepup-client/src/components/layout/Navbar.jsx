@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Search, ShoppingCart, User, Menu, X, Store, LayoutDashboard } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, X, Store, LayoutDashboard, Sun, Moon } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
+import { ThemeContext } from "../../context/ThemeContext";
 import useScrolled from "../../hooks/useScrolled";
 
 const links = [
@@ -12,8 +13,6 @@ const links = [
   { to: "/apropos", label: "À Propos" },
 ];
 
-// Destination de l'icône User selon le rôle — pas de dropdown pour
-// rester dans l'esprit épuré, un clic amène directement au bon espace.
 const getAccountLink = (user) => {
   if (!user) return "/login";
   if (user.role === "admin") return "/admin";
@@ -23,12 +22,13 @@ const getAccountLink = (user) => {
 
 function Navbar() {
   const { user, logout } = useContext(AuthContext);
+  const { theme, toggleTheme } = useContext(ThemeContext);
   const navigate = useNavigate();
   const location = useLocation();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [cartCount] = useState(0); // TODO: brancher sur CartContext quand il existera
+  const [cartCount] = useState(0);
 
   const containerRef = useRef(null);
   const logoRef = useRef(null);
@@ -39,7 +39,6 @@ function Navbar() {
   const isHome = location.pathname === "/";
   const isTransparent = isHome && !scrolled;
 
-  // Couleurs dérivées de l'état transparent/solide — un seul point de vérité
   const textClass = isTransparent ? "text-white" : "text-textColor";
   const mutedClass = isTransparent ? "text-white/70 hover:text-white" : "text-muted hover:text-accent";
   const navLinkClass = `relative font-body transition-colors duration-300 whitespace-nowrap ${
@@ -83,7 +82,6 @@ function Navbar() {
     >
       <div ref={containerRef} className="flex justify-between items-center h-full w-full relative">
 
-        {/* Bloc gauche : burger (si collapsed) + logo */}
         <div className="flex items-center gap-4 shrink-0">
           {isCollapsed && (
             <button onClick={() => setIsOpen(true)} aria-label="Ouvrir le menu" className={textClass}>
@@ -99,7 +97,6 @@ function Navbar() {
           </Link>
         </div>
 
-        {/* Logo centré, affiché uniquement en mode collapsed */}
         {isCollapsed && (
           <Link to="/" className="absolute left-1/2 -translate-x-1/2 pointer-events-none">
             <h1 className={`text-3xl font-headline tracking-wide ${textClass}`}>
@@ -109,7 +106,6 @@ function Navbar() {
           </Link>
         )}
 
-        {/* Menu desktop réel (visible seulement si pas collapsed) */}
         {!isCollapsed && (
           <div className="flex flex-1 justify-center items-center gap-10 h-full text-base">
             {links.map((l) => (
@@ -120,7 +116,6 @@ function Navbar() {
           </div>
         )}
 
-        {/* Icônes (toujours visibles) */}
         <div ref={iconsRef} className="flex items-center gap-5 shrink-0">
           {!user && (
             <Link
@@ -131,6 +126,15 @@ function Navbar() {
               Devenir vendeur
             </Link>
           )}
+
+          {/* Bouton mode sombre */}
+          <button
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Activer le mode clair" : "Activer le mode sombre"}
+            className="text-accent hover:scale-110 transition-transform duration-200"
+          >
+            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
 
           <Search size={22} className="cursor-pointer text-accent hover:scale-110 transition-transform duration-200" />
 
@@ -168,7 +172,6 @@ function Navbar() {
           )}
         </div>
 
-        {/* Menu fantôme (invisible, sert uniquement à mesurer la largeur naturelle) */}
         <div
           ref={menuRef}
           className="flex items-center gap-10 text-base absolute opacity-0 pointer-events-none -z-10"
@@ -181,7 +184,6 @@ function Navbar() {
 
       </div>
 
-      {/* Overlay mobile — toujours en fond plein, indépendant de l'état transparent/scroll */}
       <div
         className={`
           fixed inset-0 bg-backgroundColor text-textColor z-[100]
