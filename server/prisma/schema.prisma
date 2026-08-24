@@ -127,6 +127,23 @@ model Vendor {
   @@map("vendors")
 }
 
+model VendorApplication {
+  id          String    @id @default(uuid())
+  nom         String
+  prenom      String
+  email       String
+  telephone   String?
+  nom_boutique String
+  description String?
+  logo_url    String?   
+  moyen_paiement String?
+  numero_paiement String?
+  statut     VendorStatus @default(en_attente)
+  date_creation DateTime @default(now())
+
+  @@map("vendor_applications")
+}
+
 // Ledger simple des mouvements financiers d'un vendeur.
 // Permet de calculer son solde par simple somme (credit - debit)
 // sans dépendre d'un vrai split-payment côté provider (MVola/OM

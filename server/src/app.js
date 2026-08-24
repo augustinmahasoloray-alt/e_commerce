@@ -6,6 +6,7 @@ import productRoutes from "./routes/product.routes.js";
 import orderRoutes from "./routes/order.routes.js";
 import userRoutes from "./routes/user.routes.js";
 
+
 const app = express()
 app.use(cors())
 app.use(express.json())
@@ -17,6 +18,16 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/users", userRoutes);
 
 app.use(errorMiddleware)
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Routes
+app.use("/api/vendor-application", vendorApplicationRoutes);
+
+
 
 export default app;
 

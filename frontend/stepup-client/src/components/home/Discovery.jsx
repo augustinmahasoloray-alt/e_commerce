@@ -39,7 +39,7 @@ function Discovery() {
             className="group inline-flex items-center gap-2 font-body text-sm text-textColor"
           >
             <span className="relative">
-              Explorer les vendeurs
+              Devenir vendeur
               <span className="absolute left-0 -bottom-1 h-[1px] w-full bg-textColor origin-left scale-x-100 transition-transform duration-300 group-hover:bg-accent" />
             </span>
             <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1" />

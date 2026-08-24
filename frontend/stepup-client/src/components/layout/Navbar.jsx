@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Search, ShoppingCart, User, Menu, X, Store, LayoutDashboard, Sun, Moon } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, X, LayoutDashboard, Sun, Moon } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
 import { ThemeContext } from "../../context/ThemeContext";
 import useScrolled from "../../hooks/useScrolled";
@@ -13,10 +13,10 @@ const links = [
   { to: "/apropos", label: "À Propos" },
 ];
 
+// Mono-vendeur : le seul rôle "privilégié" restant est admin (toi, le vendeur unique)
 const getAccountLink = (user) => {
   if (!user) return "/login";
   if (user.role === "admin") return "/admin";
-  if (user.role === "vendeur") return "/vendeur/dashboard";
   return "/compte";
 };
 
@@ -41,9 +41,8 @@ function Navbar() {
 
   const textClass = isTransparent ? "text-white" : "text-textColor";
   const mutedClass = isTransparent ? "text-white/70 hover:text-white" : "text-muted hover:text-accent";
-  const navLinkClass = `relative font-body transition-colors duration-300 whitespace-nowrap ${
-    isTransparent ? "text-white hover:text-white/80" : "text-textColor hover:text-accent"
-  } after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-accent after:transition-all after:duration-300 hover:after:w-full`;
+  const navLinkClass = `relative font-body transition-colors duration-300 whitespace-nowrap ${isTransparent ? "text-white hover:text-white/80" : "text-textColor hover:text-accent"
+    } after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-accent after:transition-all after:duration-300 hover:after:w-full`;
 
   const checkCollision = useCallback(() => {
     if (!containerRef.current || !logoRef.current || !menuRef.current || !iconsRef.current) return;
@@ -76,9 +75,8 @@ function Navbar() {
 
   return (
     <nav
-      className={`w-full h-20 flex items-center fixed top-0 left-0 z-50 font-body px-4 sm:px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-40 transition-all duration-300 ${
-        isTransparent ? "bg-transparent shadow-none" : "bg-backgroundColor shadow-md"
-      }`}
+      className={`w-full h-20 flex items-center fixed top-0 left-0 z-50 font-body px-4 sm:px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-40 transition-all duration-300 ${isTransparent ? "bg-transparent shadow-none" : "bg-backgroundColor shadow-md"
+        }`}
     >
       <div ref={containerRef} className="flex justify-between items-center h-full w-full relative">
 
@@ -117,16 +115,6 @@ function Navbar() {
         )}
 
         <div ref={iconsRef} className="flex items-center gap-5 shrink-0">
-          {!user && (
-            <Link
-              to="/vendeur/apply"
-              className={`hidden md:flex items-center gap-2 text-sm font-body transition-colors duration-300 whitespace-nowrap ${mutedClass}`}
-            >
-              <Store size={18} />
-              Devenir vendeur
-            </Link>
-          )}
-
           {/* Bouton mode sombre */}
           <button
             onClick={toggleTheme}
@@ -147,11 +135,6 @@ function Navbar() {
             )}
           </Link>
 
-          {user?.role === "vendeur" && (
-            <Link to="/vendeur/dashboard" title="Espace vendeur" className="text-accent hover:scale-110 transition-transform duration-200">
-              <LayoutDashboard size={22} />
-            </Link>
-          )}
           {user?.role === "admin" && (
             <Link to="/admin" title="Espace admin" className="text-accent hover:scale-110 transition-transform duration-200">
               <LayoutDashboard size={22} />
@@ -207,15 +190,6 @@ function Navbar() {
               {l.label}
             </Link>
           ))}
-          {!user && (
-            <Link
-              to="/vendeur/apply"
-              onClick={() => setIsOpen(false)}
-              className="relative font-body text-textColor hover:text-accent transition-colors duration-300"
-            >
-              Devenir vendeur
-            </Link>
-          )}
           {user && (
             <button
               onClick={() => { setIsOpen(false); handleLogout(); }}

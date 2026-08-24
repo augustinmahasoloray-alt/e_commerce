@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom"; // Import de Link pour la navigation interne
 
 const sampleCreators = [
   { name: "Atelier Sundara", category: "Mobilier", image: "/images/creators/atelier-sundara.jpg", to: "/vendeur/atelier-sundara" },
@@ -36,20 +37,24 @@ function Creators({ creators = sampleCreators }) {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {creators.map((c) => (
-          <a key={c.to} href={c.to} className="group block">
+          <div key={c.to} className="group block">
             <div className="relative aspect-[3/4] overflow-hidden mb-4">
               <img
                 src={c.image}
-                alt=""
+                alt={c.name}
                 className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
               />
             </div>
             <h3 className="font-headline text-base text-textColor mb-1">{c.name}</h3>
             <p className="font-body text-sm text-muted mb-2">{c.category}</p>
-            <span className="font-body text-xs text-accent group-hover:underline">
+            {/* Remplacement du lien pour rediriger vers /boutique */}
+            <Link
+              to="/boutique"
+              className="font-body text-xs text-accent group-hover:underline"
+            >
               Voir la boutique
-            </span>
-          </a>
+            </Link>
+          </div>
         ))}
       </div>
     </section>

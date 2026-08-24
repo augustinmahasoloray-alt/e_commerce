@@ -17,15 +17,13 @@ function CollectionCard({ c }) {
     >
       <img
         src={c.image}
-        alt=""
+        alt={c.title}
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-transparent" />
-
       <span className="absolute top-5 left-5 font-body text-xs tracking-[0.1em] uppercase text-[#0B0B0B] bg-accent px-3 py-1.5">
         {c.label}
       </span>
-
       <div className="relative z-10 h-full flex items-end p-6">
         <h3 className="font-headline text-xl text-[#F5F5F5]">{c.title}</h3>
       </div>
@@ -48,7 +46,6 @@ function FeaturedCollections() {
             Des sélections thématiques. Sans concession.
           </p>
         </div>
-
         <a
           href="/collections"
           className="group inline-flex items-center gap-2 font-body text-sm text-textColor shrink-0"
@@ -58,10 +55,23 @@ function FeaturedCollections() {
         </a>
       </div>
 
-      {/* Piste de défilement infini : le contenu est dupliqué une fois,
-          l'animation translate de 0 à -50% en boucle exacte */}
-      <div className="relative overflow-hidden">
-        <div className="marquee-track flex gap-5 w-max">
+      {/* Conteneur du marquee */}
+      <div className="relative w-full overflow-hidden">
+        {/* Animation CSS pour le défilement infini */}
+        <style jsx>{`
+          .marquee-track {
+            animation: marquee 30s linear infinite;
+            display: flex;
+            gap: 1.25rem;
+            width: max-content;
+          }
+          @keyframes marquee {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-50%); }
+          }
+        `}</style>
+        {/* Désactive les interactions de la souris sur le conteneur de défilement */}
+        <div className="marquee-track" style={{ pointerEvents: 'none' }}>
           {[...collections, ...collections].map((c, i) => (
             <CollectionCard key={`${c.to}-${i}`} c={c} />
           ))}

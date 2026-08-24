@@ -1,8 +1,10 @@
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
-import Login from "./pages/Login.jsx";
 import Home from "./pages/Home.jsx";
-import { Routes, Route, useLocation } from "react-router-dom";
+import AuthPage from "./pages/AuthPage.jsx";
+import Boutique from "./pages/Boutique.jsx";
+import VendorApply from "./pages/VendorApply.jsx";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 function App() {
   const location = useLocation();
@@ -15,9 +17,25 @@ function App() {
       <main className={`flex-1 ${isHome ? "" : "pt-20"}`}>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/register" element={<AuthPage />} />
+
+          <Route path="/boutique" element={<Boutique />} />
+          <Route path="/vendeur/apply" element={<VendorApply />} />
+
+          {/* Filet de sécurité : anciennes routes marketplace multi-vendeur
+              redirigées vers la boutique unique, au cas où un lien oublié
+              pointerait encore vers l'une d'elles. */}
+          <Route path="/boutiques" element={<Navigate to="/boutique" replace />} />
+          <Route path="/marketplace" element={<Navigate to="/boutique" replace />} />
+          <Route path="/categories" element={<Navigate to="/boutique" replace />} />
+          <Route path="/collections" element={<Navigate to="/boutique" replace />} />
+          <Route path="/nouveautes" element={<Navigate to="/boutique" replace />} />
+          <Route path="/meilleures-ventes" element={<Navigate to="/boutique" replace />} />
+          <Route path="/produits" element={<Navigate to="/boutique" replace />} />
         </Routes>
       </main>
+
       <Footer />
     </div>
   );
