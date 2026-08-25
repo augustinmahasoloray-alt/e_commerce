@@ -195,3 +195,4 @@ export const getCategoriesAndBrands = async (req, res, next) => {
         next(error);
     }
 };
+

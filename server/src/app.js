@@ -14,7 +14,7 @@ import { fileURLToPath } from "url";
 import adminAuthRoutes from "./routes/adminAuth.routes.js";
 import adminProductRoutes from "./routes/adminProduct.routes.js";
 import adminDashboardRoutes from "./routes/adminDashboard.routes.js";
-
+import adminAuthRoutes from "./routes/adminAuth.routes.js";
 dotenv.config();
 
 const app = express();
@@ -42,6 +42,7 @@ app.use(errorMiddleware);
 
 app.use("/api/admin/products", adminProductRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
+app.use("/api/admin/auth", adminAuthRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
