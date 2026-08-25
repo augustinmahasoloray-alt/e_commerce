@@ -1,14 +1,57 @@
 import prisma from "../config/db.js";
 
-export const getAllProducts = async ({ page = 1, limit = 20, category_id, brand_id, vendor_id }) => {
+/**
+ * Liste publique des produits (page Boutique).
+ *
+ * Filtres acceptés (tous optionnels) :
+ * - category_id   : id d'une catégorie précise (univers OU sous-catégorie).
+ *                    Prioritaire sur universe_id si les deux sont fournis.
+ * - universe_id    : id d'un univers (catégorie racine) — inclut les produits
+ *                    de cet univers ET de toutes ses sous-catégories.
+ * - brand_id       : un id, ou plusieurs ids séparés par des virgules
+ *                    ("id1,id2,id3").
+ * - vendor_id      : filtre par boutique (page publique vendeur).
+ * - etat           : une valeur ProductCondition, ou plusieurs séparées par
+ *                    des virgules ("neuf,occasion").
+ * - livraison_gratuite : "true" pour ne garder que les produits en livraison gratuite.
+ * - prix_max       : prix maximum (filtre sur le prix de base, pas le prix promo).
+ * - sort           : "recent" (défaut) | "prix_asc" | "prix_desc" | "note".
+ */
+export const getAllProducts = async ({
+  page = 1,
+  limit = 20,
+  category_id,
+  universe_id,
+  brand_id,
+  vendor_id,
+  etat,
+  livraison_gratuite,
+  prix_max,
+  sort,
+}) => {
   const skip = (Number(page) - 1) * Number(limit);
+
+  const brandIds = brand_id ? String(brand_id).split(",").filter(Boolean) : null;
+  const etatValues = etat ? String(etat).split(",").filter(Boolean) : null;
 
   const where = {
     actif: true,
     ...(category_id && { category_id }),
-    ...(brand_id && { brand_id }),
-    ...(vendor_id && { vendor_id }), // permet de filtrer par boutique (page publique vendeur)
+    ...(!category_id &&
+      universe_id && {
+        category: { OR: [{ id: universe_id }, { parent_id: universe_id }] },
+      }),
+    ...(brandIds && brandIds.length > 0 && { brand_id: { in: brandIds } }),
+    ...(vendor_id && { vendor_id }),
+    ...(etatValues && etatValues.length > 0 && { etat: { in: etatValues } }),
+    ...(livraison_gratuite === "true" && { livraison_gratuite: true }),
+    ...(prix_max && { prix: { lte: Number(prix_max) } }),
   };
+
+  let orderBy = { date_creation: "desc" };
+  if (sort === "prix_asc") orderBy = { prix: "asc" };
+  else if (sort === "prix_desc") orderBy = { prix: "desc" };
+  else if (sort === "note") orderBy = { note_moyenne: "desc" };
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({
@@ -18,11 +61,12 @@ export const getAllProducts = async ({ page = 1, limit = 20, category_id, brand_
       include: {
         category: true,
         brand: true,
-        images: true,
+        images: { orderBy: { ordre: "asc" } },
         variants: true,
         vendor: { select: { id: true, nom_boutique: true, slug: true, logo_url: true } },
+        _count: { select: { reviews: true } },
       },
-      orderBy: { date_creation: "desc" },
+      orderBy,
     }),
     prisma.product.count({ where }),
   ]);
@@ -41,7 +85,7 @@ export const getProductById = async (id) => {
     include: {
       category: true,
       brand: true,
-      images: true,
+      images: { orderBy: { ordre: "asc" } },
       variants: true,
       reviews: true,
       vendor: { select: { id: true, nom_boutique: true, slug: true, logo_url: true } },

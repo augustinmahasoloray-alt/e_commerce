@@ -142,7 +142,6 @@
                 </div>
             </section>
 
-            <!-- Catégories & Marques (placeholder) -->
             <!-- Catégories & Marques -->
             <section id="section-categories" class="dashboard-section hidden">
                 <h2 class="font-headline text-2xl mb-6">Catégories & Marques</h2>
@@ -253,21 +252,31 @@
                             class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm"></textarea>
                     </div>
 
+                    <!-- Univers / Sous-catégorie : saisie libre (choisir dans la liste ou taper un nouveau nom) -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium mb-2">Catégorie</label>
-                            <select id="p_category" required
-                                class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm">
-                                <option value="">Chargement...</option>
-                            </select>
+                            <label class="block text-sm font-medium mb-2">Univers</label>
+                            <input type="text" id="p_universe_input" list="p_universe_list" required
+                                placeholder="Ex : Chaussures (existant ou nouveau)"
+                                class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm" />
+                            <datalist id="p_universe_list"></datalist>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-2">Marque</label>
-                            <select id="p_brand" required
-                                class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm">
-                                <option value="">Choisis d'abord une catégorie...</option>
-                            </select>
+                            <label class="block text-sm font-medium mb-2">Sous-catégorie (optionnel)</label>
+                            <input type="text" id="p_subcategory_input" list="p_subcategory_list"
+                                placeholder="Ex : Running (existant ou nouveau)"
+                                class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm" />
+                            <datalist id="p_subcategory_list"></datalist>
                         </div>
+                    </div>
+
+                    <!-- Marque : saisie libre (choisir dans la liste ou taper un nouveau nom) -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Marque</label>
+                        <input type="text" id="p_brand_input" list="p_brand_list" required
+                            placeholder="Ex : Nike (existante ou nouvelle)"
+                            class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm" />
+                        <datalist id="p_brand_list"></datalist>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -283,7 +292,6 @@
                         </div>
                     </div>
 
-                    <!-- NOUVEAU : État + Livraison -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium mb-2">État</label>

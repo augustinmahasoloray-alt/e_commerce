@@ -2,10 +2,8 @@
 
 let variantCount = 0;
 
-// Map "id de catégorie (feuille ou racine)" -> "id de la catégorie racine (univers)".
-// Reconstruite à chaque chargement des catégories.
-let categoryToUniversMap = {};
-// Toutes les marques chargées, avec leurs univers liés (result.brands du backend).
+// Cache des catégories (univers + enfants) et des marques, tel que renvoyé par le backend.
+let allCategories = [];
 let allBrands = [];
 
 // ============ Ouverture / fermeture du modal ============
@@ -24,6 +22,8 @@ function closeProductModal() {
     document.getElementById("variantsList").innerHTML = "";
     document.getElementById("imagePreviews").innerHTML = "";
     document.getElementById("productFormError").classList.add("hidden");
+    document.getElementById("p_subcategory_list").innerHTML = "";
+    document.getElementById("p_brand_list").innerHTML = "";
     variantCount = 0;
 }
 
@@ -32,82 +32,132 @@ document.getElementById("closeModalBtn").addEventListener("click", closeProductM
 document.getElementById("cancelProductBtn").addEventListener("click", closeProductModal);
 document.getElementById("modalBackdrop").addEventListener("click", closeProductModal);
 
-// ============ Catégories & marques (peuplent les <select>) ============
+// ============ Catégories & marques (combobox "choisir ou créer") ============
+
+// Cherche un élément (catégorie ou marque) par nom, insensible à la casse/espaces.
+function findByName(list, name) {
+    const target = name.trim().toLowerCase();
+    if (!target) return null;
+    return list.find((item) => item.nom.trim().toLowerCase() === target) || null;
+}
 
 async function loadCategoriesAndBrands() {
-    const categorySelect = document.getElementById("p_category");
-    const brandSelect = document.getElementById("p_brand");
+    const universeList = document.getElementById("p_universe_list");
+    const subcategoryList = document.getElementById("p_subcategory_list");
+    const brandList = document.getElementById("p_brand_list");
 
     try {
         const response = await apiFetch("/api/admin/products/meta/categories-brands");
         if (!response) return;
         const result = await response.json();
 
+        allCategories = result.categories; // tableau d'univers (racines), chacun avec .children[]
         allBrands = result.brands;
-        categoryToUniversMap = {};
 
-        categorySelect.innerHTML = '<option value="">Sélectionner...</option>';
-        result.categories.forEach((cat) => {
-            // On ne propose que les catégories "feuilles" (avec parent) ou sans enfants,
-            // pour éviter de rattacher un produit directement à un "univers" racine.
-            if (cat.children.length === 0) {
-                categoryToUniversMap[cat.id] = cat.id;
-                const opt = document.createElement("option");
-                opt.value = cat.id;
-                opt.textContent = cat.nom;
-                categorySelect.appendChild(opt);
-            } else {
-                cat.children.forEach((child) => {
-                    categoryToUniversMap[child.id] = cat.id;
-                    const opt = document.createElement("option");
-                    opt.value = child.id;
-                    opt.textContent = `${cat.nom} — ${child.nom}`;
-                    categorySelect.appendChild(opt);
-                });
-            }
-        });
+        // Datalist des univers (catégories racines)
+        universeList.innerHTML = allCategories
+            .map((u) => `<option value="${escapeHtml(u.nom)}"></option>`)
+            .join("");
 
-        // Marque désactivée tant qu'aucune catégorie n'est choisie
-        brandSelect.innerHTML = '<option value="">Choisis d\'abord une catégorie...</option>';
-        brandSelect.disabled = true;
+        // Tant qu'aucun univers n'est reconnu, la sous-catégorie et la marque restent vides
+        subcategoryList.innerHTML = "";
+        brandList.innerHTML = allBrands.map((b) => `<option value="${escapeHtml(b.nom)}"></option>`).join("");
     } catch (err) {
         console.error("Erreur chargement catégories/marques :", err);
     }
 }
 
-// Filtre et repeuple le <select> Marque selon l'univers de la catégorie choisie.
-function updateBrandOptionsForCategory(categoryId) {
-    const brandSelect = document.getElementById("p_brand");
+// Repeuple la datalist "sous-catégorie" et filtre la datalist "marque" selon l'univers tapé.
+function updateSubcategoryAndBrandLists() {
+    const universeName = document.getElementById("p_universe_input").value;
+    const subcategoryList = document.getElementById("p_subcategory_list");
+    const brandList = document.getElementById("p_brand_list");
 
-    if (!categoryId) {
-        brandSelect.innerHTML = '<option value="">Choisis d\'abord une catégorie...</option>';
-        brandSelect.disabled = true;
+    const universe = findByName(allCategories, universeName);
+
+    if (!universe) {
+        // Univers pas encore reconnu (probablement un nouvel univers en cours de frappe) :
+        // pas de sous-catégories connues, et on propose toutes les marques par défaut.
+        subcategoryList.innerHTML = "";
+        brandList.innerHTML = allBrands.map((b) => `<option value="${escapeHtml(b.nom)}"></option>`).join("");
         return;
     }
 
-    const universId = categoryToUniversMap[categoryId];
-    const filteredBrands = allBrands.filter((brand) =>
-        brand.categories.some((c) => c.id === universId)
-    );
+    subcategoryList.innerHTML = (universe.children || [])
+        .map((c) => `<option value="${escapeHtml(c.nom)}"></option>`)
+        .join("");
 
-    brandSelect.disabled = false;
-    if (filteredBrands.length === 0) {
-        brandSelect.innerHTML = '<option value="">Aucune marque pour cet univers</option>';
-        return;
-    }
-
-    brandSelect.innerHTML = '<option value="">Sélectionner...</option>';
-    filteredBrands.forEach((brand) => {
-        const opt = document.createElement("option");
-        opt.value = brand.id;
-        opt.textContent = brand.nom;
-        brandSelect.appendChild(opt);
-    });
+    const filteredBrands = allBrands.filter((brand) => brand.categories.some((c) => c.id === universe.id));
+    brandList.innerHTML = filteredBrands.map((b) => `<option value="${escapeHtml(b.nom)}"></option>`).join("");
 }
 
-document.getElementById("p_category").addEventListener("change", (e) => {
-    updateBrandOptionsForCategory(e.target.value);
-});
+document.getElementById("p_universe_input").addEventListener("input", updateSubcategoryAndBrandLists);
+
+// ============ Résolution "nom tapé" -> id (crée à la volée si besoin) ============
+
+async function createCategory(nom, parentId) {
+    const response = await apiFetch("/api/admin/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nom, parent_id: parentId }),
+    });
+    if (!response) throw new Error("Requête interrompue.");
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || `Erreur lors de la création de la catégorie "${nom}".`);
+    return result.category;
+}
+
+async function createBrand(nom, categoryIds) {
+    const response = await apiFetch("/api/admin/brands", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nom, category_ids: categoryIds }),
+    });
+    if (!response) throw new Error("Requête interrompue.");
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || `Erreur lors de la création de la marque "${nom}".`);
+    return result.brand;
+}
+
+// Résout les champs Univers / Sous-catégorie / Marque du formulaire en ids réels,
+// en créant en base ce qui n'existe pas encore.
+async function resolveCategoryAndBrand() {
+    const universeName = document.getElementById("p_universe_input").value.trim();
+    const subcategoryName = document.getElementById("p_subcategory_input").value.trim();
+    const brandName = document.getElementById("p_brand_input").value.trim();
+
+    if (!universeName) throw new Error("Indique un univers.");
+    if (!brandName) throw new Error("Indique une marque.");
+
+    // 1) Univers : existant ou à créer
+    let universe = findByName(allCategories, universeName);
+    if (!universe) {
+        universe = await createCategory(universeName, null);
+        universe.children = [];
+        allCategories.push(universe);
+    }
+
+    // 2) Sous-catégorie (optionnelle) : existante ou à créer, sous cet univers
+    let categoryId = universe.id;
+    if (subcategoryName) {
+        let subcategory = findByName(universe.children || [], subcategoryName);
+        if (!subcategory) {
+            subcategory = await createCategory(subcategoryName, universe.id);
+            universe.children = universe.children || [];
+            universe.children.push(subcategory);
+        }
+        categoryId = subcategory.id;
+    }
+
+    // 3) Marque : existante (liée ou non à cet univers) ou à créer, liée à cet univers
+    let brand = findByName(allBrands, brandName);
+    if (!brand) {
+        brand = await createBrand(brandName, [universe.id]);
+        allBrands.push(brand);
+    }
+
+    return { categoryId, brandId: brand.id };
+}
 
 // ============ Variantes dynamiques ============
 
@@ -186,11 +236,14 @@ document.getElementById("productForm").addEventListener("submit", async (e) => {
     submitBtn.textContent = "Création en cours...";
 
     try {
+        // Résout (et crée si besoin) l'univers, la sous-catégorie et la marque tapés.
+        const { categoryId, brandId } = await resolveCategoryAndBrand();
+
         const formData = new FormData();
         formData.append("nom", document.getElementById("p_nom").value);
         formData.append("description", document.getElementById("p_description").value);
-        formData.append("category_id", document.getElementById("p_category").value);
-        formData.append("brand_id", document.getElementById("p_brand").value);
+        formData.append("category_id", categoryId);
+        formData.append("brand_id", brandId);
         formData.append("prix", document.getElementById("p_prix").value);
 
         const prixPromo = document.getElementById("p_prix_promo").value;

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   SlidersHorizontal, Star, Heart, Scale, Grid3x3, List,
@@ -7,27 +7,26 @@ import {
 
 /**
  * StepUp — Boutique (catalogue unique, mono-vendeur)
- * Regroupe deux univers : Chaussures et Électronique.
- * Filtrable via query params : ?univers=chaussures|electronique&categorie=...&marque=...
+ * Univers, sous-catégories, marques et produits sont chargés dynamiquement
+ * depuis l'API (/api/categories, /api/brands, /api/products), pour que tout
+ * ce qui est créé depuis le dashboard admin apparaisse ici automatiquement.
  * pt-20 NON inclus ici : App.jsx l'ajoute déjà pour toute route ≠ "/".
  */
 
-const univers = [
-  {
-    key: "chaussures",
-    label: "Chaussures",
-    categories: ["Sneakers", "Running", "Talons", "Bottes", "Sandales", "Mocassins", "Enfants", "Accessoires"],
-    brands: ["Nike", "Adidas", "Puma", "Clarks", "Timberland", "Birkenstock"],
-  },
-  {
-    key: "electronique",
-    label: "Électronique",
-    categories: ["PC Gaming", "Consoles", "Écrans", "Casques", "Claviers", "Smartphones"],
-    brands: ["Asus", "MSI", "Sony", "Microsoft", "Samsung", "Razer", "Logitech", "Apple"],
-  },
+const CONDITIONS = [
+  { value: "neuf", label: "Neuf" },
+  { value: "reconditionne", label: "Reconditionné" },
+  { value: "occasion", label: "Occasion" },
 ];
 
-const conditions = ["Neuf", "Reconditionné", "Occasion"];
+const SORT_OPTIONS = [
+  { value: "recent", label: "Pertinence" },
+  { value: "prix_asc", label: "Prix croissant" },
+  { value: "prix_desc", label: "Prix décroissant" },
+  { value: "note", label: "Notes des acheteurs" },
+];
+
+const PRICE_MAX_DEFAULT = 2500;
 
 const badgeStyles = {
   promo: { label: "Promo", icon: null, className: "bg-red-500/90 text-white" },
@@ -36,24 +35,31 @@ const badgeStyles = {
   dernierepiece: { label: "Dernière pièce", icon: AlertTriangle, className: "bg-muted text-backgroundColor" },
 };
 
-const products = [
-  // Chaussures
-  { name: "Sneaker Cuir Blanc", univers: "chaussures", cat: "Sneakers", brand: "Nike", price: 89.99, oldPrice: 109.99, rating: 4.8, reviews: 120, stock: "En stock", badges: ["promo", "topvente"], img: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&q=80" },
-  { name: "Running Air Léger", univers: "chaussures", cat: "Running", brand: "Adidas", price: 104.99, oldPrice: null, rating: 4.7, reviews: 98, stock: "En stock", badges: ["express"], img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80" },
-  { name: "Derby Cuir Marron", univers: "chaussures", cat: "Mocassins", brand: "Clarks", price: 129.99, oldPrice: null, rating: 4.9, reviews: 156, stock: "Plus que 3 unités", badges: ["topvente"], img: "https://images.unsplash.com/photo-1614252369475-531eba835eb1?w=600&q=80" },
-  { name: "Sandale Minimaliste", univers: "chaussures", cat: "Sandales", brand: "Birkenstock", price: 59.99, oldPrice: null, rating: 4.6, reviews: 69, stock: "En stock", badges: [], img: "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?w=600&q=80" },
-  { name: "Botte Chelsea Noire", univers: "chaussures", cat: "Bottes", brand: "Timberland", price: 149.99, oldPrice: 179.99, rating: 4.8, reviews: 132, stock: "En stock", badges: ["promo"], img: "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=600&q=80" },
-  { name: "Sneaker Édition Studio", univers: "chaussures", cat: "Sneakers", brand: "Puma", price: 119.99, oldPrice: null, rating: 4.9, reviews: 110, stock: "Rupture", badges: [], img: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=600&q=80" },
-  // Électronique
-  { name: "PC Gaming Asus ROG Strix", univers: "electronique", cat: "PC Gaming", brand: "Asus", price: 1899, oldPrice: 2199, rating: 4.7, reviews: 234, stock: "En stock", badges: ["promo"], img: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=600&q=80" },
-  { name: "Écran MSI 27\" 240Hz QHD", univers: "electronique", cat: "Écrans", brand: "MSI", price: 349, oldPrice: null, rating: 4.6, reviews: 98, stock: "Plus que 3 unités", badges: ["express"], img: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=600&q=80" },
-  { name: "Casque Sony WH-1000XM5", univers: "electronique", cat: "Casques", brand: "Sony", price: 329, oldPrice: 379, rating: 4.9, reviews: 512, stock: "En stock", badges: ["promo", "topvente"], img: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=600&q=80" },
-  { name: "Console PlayStation 5", univers: "electronique", cat: "Consoles", brand: "Sony", price: 549, oldPrice: null, rating: 4.8, reviews: 876, stock: "En stock", badges: ["topvente"], img: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=600&q=80" },
-  { name: "Clavier Razer BlackWidow V4", univers: "electronique", cat: "Claviers", brand: "Razer", price: 159, oldPrice: null, rating: 4.5, reviews: 143, stock: "Plus que 3 unités", badges: ["express"], img: "https://images.unsplash.com/photo-1595225476474-63038da0b6f5?w=600&q=80" },
-  { name: "Smartphone Samsung Galaxy S25", univers: "electronique", cat: "Smartphones", brand: "Samsung", price: 899, oldPrice: 999, rating: 4.7, reviews: 601, stock: "En stock", badges: ["promo"], img: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=600&q=80" },
-];
+// ============ Fonctions dérivées à partir des données produit brutes ============
 
-const sortOptions = ["Pertinence", "Prix croissant", "Prix décroissant", "Notes des acheteurs"];
+function getStockTotal(product) {
+  return (product.variants || []).reduce((sum, v) => sum + (v.stock || 0), 0);
+}
+
+function getStockLabel(product) {
+  const total = getStockTotal(product);
+  if (total <= 0) return "Rupture";
+  if (total <= 3) return `Plus que ${total} unités`;
+  return "En stock";
+}
+
+function getBadges(product) {
+  const badges = [];
+  if (product.prix_promo) badges.push("promo");
+  if (product.livraison_express) badges.push("express");
+  const stockTotal = getStockTotal(product);
+  if (stockTotal > 0 && stockTotal <= 3) badges.push("dernierepiece");
+  const reviewsCount = product._count?.reviews ?? 0;
+  // Heuristique faute de champ dédié en base : à ajuster/remplacer par un
+  // champ "is_top_vente" côté admin si tu veux un contrôle manuel.
+  if (Number(product.note_moyenne) >= 4.7 && reviewsCount >= 100) badges.push("topvente");
+  return badges;
+}
 
 function Pill({ children, variant = "primary", className = "", ...props }) {
   const base = "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all duration-300";
@@ -92,42 +98,129 @@ function FilterSection({ title, children, defaultOpen = true }) {
 export default function Boutique() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const activeUnivers = searchParams.get("univers") || "chaussures";
-  const activeCat = searchParams.get("categorie") || "Tout";
+  // ============ Univers / catégories / marques (chargés une fois) ============
 
-  const [sort, setSort] = useState(sortOptions[0]);
-  const [view, setView] = useState("grid");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [selectedConditions, setSelectedConditions] = useState([]);
-  const [freeDeliveryOnly, setFreeDeliveryOnly] = useState(false);
-  const [priceMax, setPriceMax] = useState(2500);
+  const [universes, setUniverses] = useState([]); // [{ id, nom, children: [{id, nom}] }]
+  const [brands, setBrands] = useState([]); // [{ id, nom, categories: [{id, nom}] }]
+  const [taxonomyLoading, setTaxonomyLoading] = useState(true);
+  const [taxonomyError, setTaxonomyError] = useState(null);
 
-  const currentUnivers = univers.find((u) => u.key === activeUnivers) ?? univers[0];
+  useEffect(() => {
+    let cancelled = false;
 
-  const setUnivers = (key) => {
-    setSearchParams({ univers: key });
+    async function loadTaxonomy() {
+      setTaxonomyLoading(true);
+      setTaxonomyError(null);
+      try {
+        const [catRes, brandRes] = await Promise.all([
+          fetch("/api/categories"),
+          fetch("/api/brands"),
+        ]);
+        const catJson = await catRes.json();
+        const brandJson = await brandRes.json();
+
+        if (!catRes.ok) throw new Error(catJson.message || "Erreur lors du chargement des catégories.");
+        if (!brandRes.ok) throw new Error(brandJson.message || "Erreur lors du chargement des marques.");
+
+        if (!cancelled) {
+          setUniverses(catJson.categories || []);
+          setBrands(brandJson.brands || []);
+        }
+      } catch (err) {
+        if (!cancelled) setTaxonomyError(err.message);
+      } finally {
+        if (!cancelled) setTaxonomyLoading(false);
+      }
+    }
+
+    loadTaxonomy();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeUniversId = searchParams.get("univers") || (universes[0]?.id ?? "");
+  const activeCategoryId = searchParams.get("categorie") || "";
+
+  const currentUniverse = universes.find((u) => u.id === activeUniversId) ?? universes[0];
+
+  // Dès que les univers sont chargés, si l'URL n'a pas encore de "univers", on fixe le premier.
+  useEffect(() => {
+    if (!taxonomyLoading && universes.length > 0 && !searchParams.get("univers")) {
+      setSearchParams({ univers: universes[0].id });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taxonomyLoading, universes]);
+
+  const universeBrands = useMemo(() => {
+    if (!currentUniverse) return [];
+    return brands.filter((b) => (b.categories || []).some((c) => c.id === currentUniverse.id));
+  }, [brands, currentUniverse]);
+
+  const setUnivers = (id) => {
+    setSearchParams({ univers: id });
     setSelectedBrands([]);
   };
 
-  const setCategorie = (cat) => {
-    const params = { univers: activeUnivers };
-    if (cat !== "Tout") params.categorie = cat;
+  const setCategorie = (categoryId) => {
+    const params = { univers: activeUniversId };
+    if (categoryId) params.categorie = categoryId;
     setSearchParams(params);
   };
+
+  // ============ Filtres UI ============
+
+  const [sort, setSort] = useState(SORT_OPTIONS[0].value);
+  const [view, setView] = useState("grid");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [selectedBrands, setSelectedBrands] = useState([]); // ids
+  const [selectedConditions, setSelectedConditions] = useState([]); // valeurs enum
+  const [freeDeliveryOnly, setFreeDeliveryOnly] = useState(false);
+  const [priceMax, setPriceMax] = useState(PRICE_MAX_DEFAULT);
 
   const toggle = (list, setList, value) =>
     setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
-  const filtered = useMemo(() => {
-    return products.filter((p) => {
-      if (p.univers !== activeUnivers) return false;
-      if (activeCat !== "Tout" && p.cat !== activeCat) return false;
-      if (selectedBrands.length && !selectedBrands.includes(p.brand)) return false;
-      if (p.price > priceMax) return false;
-      return true;
-    });
-  }, [activeUnivers, activeCat, selectedBrands, priceMax]);
+  // ============ Produits (dépendent des filtres actifs) ============
+
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState(null);
+
+  const fetchProducts = useCallback(async () => {
+    if (!activeUniversId) return; // pas encore d'univers résolu
+
+    setProductsLoading(true);
+    setProductsError(null);
+
+    const params = new URLSearchParams();
+    params.set("limit", "100");
+    params.set("sort", sort);
+    if (activeCategoryId) {
+      params.set("category_id", activeCategoryId);
+    } else {
+      params.set("universe_id", activeUniversId);
+    }
+    if (selectedBrands.length > 0) params.set("brand_id", selectedBrands.join(","));
+    if (selectedConditions.length > 0) params.set("etat", selectedConditions.join(","));
+    if (freeDeliveryOnly) params.set("livraison_gratuite", "true");
+    if (priceMax < PRICE_MAX_DEFAULT) params.set("prix_max", String(priceMax));
+
+    try {
+      const response = await fetch(`/api/products?${params.toString()}`);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Erreur lors du chargement des produits.");
+      setProducts(result.products || []);
+    } catch (err) {
+      setProductsError(err.message);
+    } finally {
+      setProductsLoading(false);
+    }
+  }, [activeUniversId, activeCategoryId, selectedBrands, selectedConditions, freeDeliveryOnly, priceMax, sort]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const FiltersPanel = () => (
     <>
@@ -135,7 +228,7 @@ export default function Boutique() {
         <input
           type="range"
           min={0}
-          max={2500}
+          max={PRICE_MAX_DEFAULT}
           step={10}
           value={priceMax}
           onChange={(e) => setPriceMax(Number(e.target.value))}
@@ -149,15 +242,18 @@ export default function Boutique() {
 
       <FilterSection title="Marques">
         <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
-          {currentUnivers.brands.map((b) => (
-            <label key={b} className="flex items-center gap-2 text-sm text-muted cursor-pointer">
+          {universeBrands.length === 0 && (
+            <span className="text-xs text-muted italic">Aucune marque pour cet univers.</span>
+          )}
+          {universeBrands.map((b) => (
+            <label key={b.id} className="flex items-center gap-2 text-sm text-muted cursor-pointer">
               <input
                 type="checkbox"
-                checked={selectedBrands.includes(b)}
-                onChange={() => toggle(selectedBrands, setSelectedBrands, b)}
+                checked={selectedBrands.includes(b.id)}
+                onChange={() => toggle(selectedBrands, setSelectedBrands, b.id)}
                 className="accent-[var(--color-accent,#e09f3e)]"
               />
-              {b}
+              {b.nom}
             </label>
           ))}
         </div>
@@ -165,15 +261,15 @@ export default function Boutique() {
 
       <FilterSection title="État">
         <div className="flex flex-col gap-2">
-          {conditions.map((c) => (
-            <label key={c} className="flex items-center gap-2 text-sm text-muted cursor-pointer">
+          {CONDITIONS.map((c) => (
+            <label key={c.value} className="flex items-center gap-2 text-sm text-muted cursor-pointer">
               <input
                 type="checkbox"
-                checked={selectedConditions.includes(c)}
-                onChange={() => toggle(selectedConditions, setSelectedConditions, c)}
+                checked={selectedConditions.includes(c.value)}
+                onChange={() => toggle(selectedConditions, setSelectedConditions, c.value)}
                 className="accent-[var(--color-accent,#e09f3e)]"
               />
-              {c}
+              {c.label}
             </label>
           ))}
         </div>
@@ -188,26 +284,50 @@ export default function Boutique() {
     </>
   );
 
+  if (taxonomyLoading) {
+    return (
+      <main className="min-h-screen font-body bg-backgroundColor text-textColor flex items-center justify-center">
+        <p className="text-sm text-muted">Chargement de la boutique...</p>
+      </main>
+    );
+  }
+
+  if (taxonomyError) {
+    return (
+      <main className="min-h-screen font-body bg-backgroundColor text-textColor flex items-center justify-center">
+        <p className="text-sm text-red-500">{taxonomyError}</p>
+      </main>
+    );
+  }
+
+  if (universes.length === 0) {
+    return (
+      <main className="min-h-screen font-body bg-backgroundColor text-textColor flex items-center justify-center">
+        <p className="text-sm text-muted">Aucun univers n'a encore été créé.</p>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen font-body bg-backgroundColor text-textColor">
       {/* en-tête boutique */}
       <section className="px-4 sm:px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-40 py-10 border-b border-muted/10">
         <span className="text-xs tracking-[0.2em] text-accent font-medium">— LA BOUTIQUE STEPUP</span>
         <h1 className="font-display font-light text-4xl md:text-5xl leading-tight mt-3">
-          Chaussures & électronique, sélectionnées pour vous.
+          Sélectionnés pour vous.
         </h1>
 
         {/* toggle univers */}
-        <div className="flex gap-3 mt-6">
-          {univers.map((u) => (
+        <div className="flex gap-3 mt-6 flex-wrap">
+          {universes.map((u) => (
             <button
-              key={u.key}
-              onClick={() => setUnivers(u.key)}
+              key={u.id}
+              onClick={() => setUnivers(u.id)}
               className={`px-5 py-2.5 rounded-full text-sm font-medium transition-colors duration-300 ${
-                activeUnivers === u.key ? "bg-accent text-backgroundColor" : "bg-surfaceColor text-muted hover:text-accent"
+                activeUniversId === u.id ? "bg-accent text-backgroundColor" : "bg-surfaceColor text-muted hover:text-accent"
               }`}
             >
-              {u.label}
+              {u.nom}
             </button>
           ))}
         </div>
@@ -223,25 +343,25 @@ export default function Boutique() {
         </aside>
 
         <div>
-          {/* catégories du univers actif */}
+          {/* sous-catégories de l'univers actif */}
           <div className="flex flex-wrap gap-3 mb-6">
             <button
-              onClick={() => setCategorie("Tout")}
+              onClick={() => setCategorie("")}
               className={`px-4 py-2 rounded-full text-sm transition-colors duration-300 ${
-                activeCat === "Tout" ? "bg-accent text-backgroundColor" : "bg-surfaceColor text-muted hover:text-accent"
+                !activeCategoryId ? "bg-accent text-backgroundColor" : "bg-surfaceColor text-muted hover:text-accent"
               }`}
             >
               Tout
             </button>
-            {currentUnivers.categories.map((cat) => (
+            {(currentUniverse?.children || []).map((cat) => (
               <button
-                key={cat}
-                onClick={() => setCategorie(cat)}
+                key={cat.id}
+                onClick={() => setCategorie(cat.id)}
                 className={`px-4 py-2 rounded-full text-sm transition-colors duration-300 ${
-                  activeCat === cat ? "bg-accent text-backgroundColor" : "bg-surfaceColor text-muted hover:text-accent"
+                  activeCategoryId === cat.id ? "bg-accent text-backgroundColor" : "bg-surfaceColor text-muted hover:text-accent"
                 }`}
               >
-                {cat}
+                {cat.nom}
               </button>
             ))}
           </div>
@@ -254,7 +374,7 @@ export default function Boutique() {
               >
                 <SlidersHorizontal size={14} /> Filtres
               </button>
-              <span className="text-sm text-muted">{filtered.length} produits</span>
+              <span className="text-sm text-muted">{productsLoading ? "..." : `${products.length} produits`}</span>
             </div>
 
             <div className="flex items-center gap-3">
@@ -263,7 +383,7 @@ export default function Boutique() {
                 onChange={(e) => setSort(e.target.value)}
                 className="bg-surfaceColor text-sm rounded-full px-4 py-2 outline-none"
               >
-                {sortOptions.map((s) => <option key={s}>{s}</option>)}
+                {SORT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
               <div className="hidden sm:flex items-center gap-1 bg-surfaceColor rounded-full p-1">
                 <button onClick={() => setView("grid")} className={`p-1.5 rounded-full ${view === "grid" ? "bg-accent text-backgroundColor" : "text-muted"}`} aria-label="Vue grille">
@@ -276,54 +396,79 @@ export default function Boutique() {
             </div>
           </div>
 
-          <div className={view === "grid" ? "grid grid-cols-2 md:grid-cols-3 gap-6" : "flex flex-col gap-4"}>
-            {filtered.map((p) => (
-              <div key={p.name} className={view === "grid" ? "group cursor-pointer" : "group cursor-pointer flex gap-4 bg-surfaceColor rounded-xl p-3"}>
-                <div className={view === "grid" ? "relative aspect-square rounded-xl overflow-hidden bg-surfaceColor mb-3" : "relative w-32 h-32 shrink-0 rounded-lg overflow-hidden bg-backgroundColor"}>
-                  <img src={p.img} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
-                    {p.badges.map((b) => <Badge key={b} type={b} />)}
+          {productsError && (
+            <p className="text-sm text-red-500 text-center py-16">{productsError}</p>
+          )}
+
+          {!productsError && productsLoading && (
+            <p className="text-sm text-muted text-center py-16">Chargement des produits...</p>
+          )}
+
+          {!productsError && !productsLoading && (
+            <div className={view === "grid" ? "grid grid-cols-2 md:grid-cols-3 gap-6" : "flex flex-col gap-4"}>
+              {products.map((p) => {
+                const badges = getBadges(p);
+                const stockLabel = getStockLabel(p);
+                const image = p.images?.[0]?.url;
+                const prix = Number(p.prix);
+                const prixPromo = p.prix_promo ? Number(p.prix_promo) : null;
+                const displayPrice = prixPromo ?? prix;
+                const oldPrice = prixPromo ? prix : null;
+                const reviewsCount = p._count?.reviews ?? 0;
+
+                return (
+                  <div key={p.id} className={view === "grid" ? "group cursor-pointer" : "group cursor-pointer flex gap-4 bg-surfaceColor rounded-xl p-3"}>
+                    <div className={view === "grid" ? "relative aspect-square rounded-xl overflow-hidden bg-surfaceColor mb-3" : "relative w-32 h-32 shrink-0 rounded-lg overflow-hidden bg-backgroundColor"}>
+                      {image ? (
+                        <img src={image} alt={p.nom} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <div className="w-full h-full bg-backgroundColor" />
+                      )}
+                      <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+                        {badges.map((b) => <Badge key={b} type={b} />)}
+                      </div>
+                      <button aria-label="Favoris" className="absolute top-2 right-2 w-7 h-7 rounded-full bg-backgroundColor/80 flex items-center justify-center">
+                        <Heart size={13} />
+                      </button>
+                    </div>
+
+                    <div className="flex-1">
+                      <p className="text-[11px] text-accent uppercase tracking-wide mb-0.5">{p.brand?.nom}</p>
+                      <p className="text-sm font-medium leading-tight">{p.nom}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} size={10} fill="currentColor" className="text-accent" />
+                        ))}
+                        <span className="text-[11px] text-muted ml-1">{Number(p.note_moyenne).toFixed(1)} · {reviewsCount} avis</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="font-headline text-base">{displayPrice.toFixed(2)} €</span>
+                        {oldPrice && <span className="text-xs text-muted line-through">{oldPrice.toFixed(2)} €</span>}
+                      </div>
+
+                      <p className={`text-[11px] mt-1 ${
+                        stockLabel === "En stock" ? "text-accent" : stockLabel === "Rupture" ? "text-muted" : "text-orange-500"
+                      }`}>
+                        {stockLabel}
+                      </p>
+
+                      <div className="flex items-center gap-2 mt-3">
+                        <Pill variant="primary" className="!px-4 !py-2 text-xs flex-1" disabled={stockLabel === "Rupture"}>
+                          {stockLabel === "Rupture" ? "Précommander" : "Ajouter au panier"}
+                        </Pill>
+                        <button aria-label="Comparer" className="w-9 h-9 rounded-full border border-muted/30 flex items-center justify-center hover:border-accent hover:text-accent transition-colors shrink-0">
+                          <Scale size={13} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <button aria-label="Favoris" className="absolute top-2 right-2 w-7 h-7 rounded-full bg-backgroundColor/80 flex items-center justify-center">
-                    <Heart size={13} />
-                  </button>
-                </div>
+                );
+              })}
+            </div>
+          )}
 
-                <div className="flex-1">
-                  <p className="text-[11px] text-accent uppercase tracking-wide mb-0.5">{p.brand}</p>
-                  <p className="text-sm font-medium leading-tight">{p.name}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} size={10} fill="currentColor" className="text-accent" />
-                    ))}
-                    <span className="text-[11px] text-muted ml-1">{p.rating} · {p.reviews} avis</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="font-headline text-base">{p.price.toFixed(2)} €</span>
-                    {p.oldPrice && <span className="text-xs text-muted line-through">{p.oldPrice.toFixed(2)} €</span>}
-                  </div>
-
-                  <p className={`text-[11px] mt-1 ${
-                    p.stock === "En stock" ? "text-accent" : p.stock === "Rupture" ? "text-muted" : "text-orange-500"
-                  }`}>
-                    {p.stock}
-                  </p>
-
-                  <div className="flex items-center gap-2 mt-3">
-                    <Pill variant="primary" className="!px-4 !py-2 text-xs flex-1" disabled={p.stock === "Rupture"}>
-                      {p.stock === "Rupture" ? "Précommander" : "Ajouter au panier"}
-                    </Pill>
-                    <button aria-label="Comparer" className="w-9 h-9 rounded-full border border-muted/30 flex items-center justify-center hover:border-accent hover:text-accent transition-colors shrink-0">
-                      <Scale size={13} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {filtered.length === 0 && (
+          {!productsError && !productsLoading && products.length === 0 && (
             <p className="text-sm text-muted text-center py-16">Aucun produit ne correspond à ces filtres.</p>
           )}
         </div>
