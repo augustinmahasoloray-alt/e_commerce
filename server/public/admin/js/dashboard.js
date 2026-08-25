@@ -2,6 +2,10 @@
 
 let categoryChartInstance = null;
 
+function formatMontant(valeur) {
+    return `${Number(valeur).toFixed(2)} €`;
+}
+
 async function loadDashboardStats() {
     try {
         const response = await apiFetch("/api/admin/dashboard/stats");
@@ -12,11 +16,26 @@ async function loadDashboardStats() {
             throw new Error(result.message || "Erreur lors du chargement des statistiques.");
         }
 
-        const { produits_actifs, commandes_en_attente, chiffre_affaires, produits_par_categorie } = result.stats;
+        const {
+            produits_actifs,
+            commandes_en_attente,
+            chiffre_affaires,
+            clients,
+            ruptures_stock,
+            ventes_jour,
+            ventes_semaine,
+            ventes_mois,
+            produits_par_categorie,
+        } = result.stats;
 
         document.getElementById("statProducts").textContent = produits_actifs;
         document.getElementById("statOrders").textContent = commandes_en_attente;
-        document.getElementById("statRevenue").textContent = `${Number(chiffre_affaires).toFixed(2)} €`;
+        document.getElementById("statRevenue").textContent = formatMontant(chiffre_affaires);
+        document.getElementById("statClients").textContent = clients;
+        document.getElementById("statOutOfStock").textContent = ruptures_stock;
+        document.getElementById("statSalesToday").textContent = formatMontant(ventes_jour);
+        document.getElementById("statSalesWeek").textContent = formatMontant(ventes_semaine);
+        document.getElementById("statSalesMonth").textContent = formatMontant(ventes_mois);
 
         renderCategoryChart(produits_par_categorie);
     } catch (err) {
