@@ -6,13 +6,28 @@ let variantCount = 0;
 let allCategories = [];
 let allBrands = [];
 
+// État du mode édition
+let editingProductId = null;
+let existingImages = []; // [{ id, url }, ...] du produit en cours d'édition
+let imageIdsToDelete = [];
+
 // ============ Ouverture / fermeture du modal ============
 
-function openProductModal() {
+async function openProductModal(productId = null) {
+    editingProductId = productId;
     document.getElementById("productModal").classList.remove("hidden");
-    loadCategoriesAndBrands();
-    if (document.getElementById("variantsList").children.length === 0) {
-        addVariantRow();
+    await loadCategoriesAndBrands();
+
+    if (editingProductId) {
+        document.getElementById("productModalTitle").textContent = "Modifier le produit";
+        document.getElementById("submitProductBtn").textContent = "Enregistrer les modifications";
+        await prefillProductForm(editingProductId);
+    } else {
+        document.getElementById("productModalTitle").textContent = "Ajouter un produit";
+        document.getElementById("submitProductBtn").textContent = "Créer le produit";
+        if (document.getElementById("variantsList").children.length === 0) {
+            addVariantRow();
+        }
     }
 }
 
@@ -24,13 +39,89 @@ function closeProductModal() {
     document.getElementById("productFormError").classList.add("hidden");
     document.getElementById("p_subcategory_list").innerHTML = "";
     document.getElementById("p_brand_list").innerHTML = "";
+    document.getElementById("existingImagesWrapper").classList.add("hidden");
+    document.getElementById("existingImagesList").innerHTML = "";
     variantCount = 0;
+    editingProductId = null;
+    existingImages = [];
+    imageIdsToDelete = [];
 }
 
-document.getElementById("openAddProduct").addEventListener("click", openProductModal);
+document.getElementById("openAddProduct").addEventListener("click", () => openProductModal());
 document.getElementById("closeModalBtn").addEventListener("click", closeProductModal);
 document.getElementById("cancelProductBtn").addEventListener("click", closeProductModal);
 document.getElementById("modalBackdrop").addEventListener("click", closeProductModal);
+
+// ============ Préremplissage en mode édition ============
+
+async function prefillProductForm(productId) {
+    try {
+        const response = await apiFetch(`/api/admin/products/${productId}`);
+        if (!response) return;
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || "Erreur lors du chargement du produit.");
+
+        const p = result.product;
+
+        document.getElementById("p_nom").value = p.nom;
+        document.getElementById("p_description").value = p.description || "";
+        document.getElementById("p_universe_input").value = p.univers || "";
+        document.getElementById("p_subcategory_input").value = p.sous_categorie || "";
+        document.getElementById("p_brand_input").value = p.marque || "";
+        updateSubcategoryAndBrandLists();
+        document.getElementById("p_prix").value = p.prix;
+        document.getElementById("p_prix_promo").value = p.prix_promo ?? "";
+        document.getElementById("p_etat").value = p.etat;
+        document.getElementById("p_livraison_gratuite").checked = p.livraison_gratuite;
+        document.getElementById("p_livraison_express").checked = p.livraison_express;
+        document.getElementById("p_actif").checked = p.actif;
+
+        document.getElementById("variantsList").innerHTML = "";
+        p.variants.forEach((v) => addVariantRow(v));
+
+        existingImages = p.images;
+        imageIdsToDelete = [];
+        renderExistingImages();
+    } catch (err) {
+        document.getElementById("productFormError").textContent = err.message;
+        document.getElementById("productFormError").classList.remove("hidden");
+    }
+}
+
+// ============ Images existantes (mode édition) ============
+
+function renderExistingImages() {
+    const wrapper = document.getElementById("existingImagesWrapper");
+    const list = document.getElementById("existingImagesList");
+
+    if (!editingProductId || existingImages.length === 0) {
+        wrapper.classList.add("hidden");
+        list.innerHTML = "";
+        return;
+    }
+
+    wrapper.classList.remove("hidden");
+    list.innerHTML = existingImages
+        .filter((img) => !imageIdsToDelete.includes(img.id))
+        .map(
+            (img) => `
+                <div class="relative">
+                    <img src="${img.url}" class="w-16 h-16 object-cover rounded-md" />
+                    <button type="button" data-image-id="${img.id}"
+                        class="removeExistingImageBtn absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs leading-none"
+                        aria-label="Supprimer cette image">✕</button>
+                </div>
+            `
+        )
+        .join("");
+
+    list.querySelectorAll(".removeExistingImageBtn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            imageIdsToDelete.push(btn.dataset.imageId);
+            renderExistingImages();
+        });
+    });
+}
 
 // ============ Catégories & marques (combobox "choisir ou créer") ============
 
@@ -161,21 +252,24 @@ async function resolveCategoryAndBrand() {
 
 // ============ Variantes dynamiques ============
 
-function addVariantRow() {
+// variant = null en création, ou { id, taille, couleur, stock, sku } en édition/prérempli
+function addVariantRow(variant = null) {
     variantCount++;
     const id = variantCount;
 
     const row = document.createElement("div");
     row.className = "grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-center";
     row.dataset.variantId = id;
+    if (variant?.id) row.dataset.dbId = variant.id;
+
     row.innerHTML = `
-        <input type="text" placeholder="Taille" data-field="taille" required
+        <input type="text" placeholder="Taille" data-field="taille" required value="${escapeHtml(variant?.taille ?? "")}"
             class="px-3 py-2 rounded-md bg-backgroundColor border border-muted/30 outline-none text-sm focus:ring-2 focus:ring-accent" />
-        <input type="text" placeholder="Couleur" data-field="couleur" required
+        <input type="text" placeholder="Couleur" data-field="couleur" required value="${escapeHtml(variant?.couleur ?? "")}"
             class="px-3 py-2 rounded-md bg-backgroundColor border border-muted/30 outline-none text-sm focus:ring-2 focus:ring-accent" />
-        <input type="number" placeholder="Stock" data-field="stock" min="0" required
+        <input type="number" placeholder="Stock" data-field="stock" min="0" required value="${variant?.stock ?? ""}"
             class="px-3 py-2 rounded-md bg-backgroundColor border border-muted/30 outline-none text-sm focus:ring-2 focus:ring-accent" />
-        <input type="text" placeholder="SKU" data-field="sku" required
+        <input type="text" placeholder="SKU" data-field="sku" required value="${escapeHtml(variant?.sku ?? "")}"
             class="px-3 py-2 rounded-md bg-backgroundColor border border-muted/30 outline-none text-sm focus:ring-2 focus:ring-accent" />
         <button type="button" class="removeVariantBtn text-red-500 hover:text-red-600 text-sm px-2" aria-label="Supprimer la variante">✕</button>
     `;
@@ -184,19 +278,23 @@ function addVariantRow() {
     document.getElementById("variantsList").appendChild(row);
 }
 
-document.getElementById("addVariantBtn").addEventListener("click", addVariantRow);
+document.getElementById("addVariantBtn").addEventListener("click", () => addVariantRow());
 
 function collectVariants() {
     const rows = document.querySelectorAll("#variantsList > div");
-    return Array.from(rows).map((row) => ({
-        taille: row.querySelector('[data-field="taille"]').value,
-        couleur: row.querySelector('[data-field="couleur"]').value,
-        stock: row.querySelector('[data-field="stock"]').value,
-        sku: row.querySelector('[data-field="sku"]').value,
-    }));
+    return Array.from(rows).map((row) => {
+        const variant = {
+            taille: row.querySelector('[data-field="taille"]').value,
+            couleur: row.querySelector('[data-field="couleur"]').value,
+            stock: row.querySelector('[data-field="stock"]').value,
+            sku: row.querySelector('[data-field="sku"]').value,
+        };
+        if (row.dataset.dbId) variant.id = row.dataset.dbId;
+        return variant;
+    });
 }
 
-// ============ Prévisualisation des images ============
+// ============ Prévisualisation des nouvelles images ============
 
 document.getElementById("p_images").addEventListener("change", (e) => {
     const preview = document.getElementById("imagePreviews");
@@ -216,7 +314,7 @@ document.getElementById("p_images").addEventListener("change", (e) => {
         });
 });
 
-// ============ Soumission du formulaire ============
+// ============ Soumission du formulaire (création ou édition) ============
 
 document.getElementById("productForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -232,8 +330,16 @@ document.getElementById("productForm").addEventListener("submit", async (e) => {
         return;
     }
 
+    const remainingExisting = existingImages.length - imageIdsToDelete.length;
+    const newFilesCount = document.getElementById("p_images").files.length;
+    if (remainingExisting + newFilesCount > 6) {
+        errorMsg.textContent = "Un produit ne peut pas avoir plus de 6 images.";
+        errorMsg.classList.remove("hidden");
+        return;
+    }
+
     submitBtn.disabled = true;
-    submitBtn.textContent = "Création en cours...";
+    submitBtn.textContent = editingProductId ? "Enregistrement..." : "Création en cours...";
 
     try {
         // Résout (et crée si besoin) l'univers, la sous-catégorie et la marque tapés.
@@ -245,29 +351,30 @@ document.getElementById("productForm").addEventListener("submit", async (e) => {
         formData.append("category_id", categoryId);
         formData.append("brand_id", brandId);
         formData.append("prix", document.getElementById("p_prix").value);
-
-        const prixPromo = document.getElementById("p_prix_promo").value;
-        if (prixPromo) formData.append("prix_promo", prixPromo);
-
+        formData.append("prix_promo", document.getElementById("p_prix_promo").value || "");
         formData.append("etat", document.getElementById("p_etat").value);
         formData.append("livraison_gratuite", document.getElementById("p_livraison_gratuite").checked);
         formData.append("livraison_express", document.getElementById("p_livraison_express").checked);
-
         formData.append("variants", JSON.stringify(variants));
+
+        if (editingProductId) {
+            formData.append("actif", document.getElementById("p_actif").checked);
+            formData.append("deleted_image_ids", JSON.stringify(imageIdsToDelete));
+        }
 
         const imageFiles = document.getElementById("p_images").files;
         Array.from(imageFiles).forEach((file) => formData.append("images", file));
 
-        const response = await apiFetch("/api/admin/products", {
-            method: "POST",
-            body: formData,
-        });
+        const url = editingProductId ? `/api/admin/products/${editingProductId}` : "/api/admin/products";
+        const method = editingProductId ? "PUT" : "POST";
+
+        const response = await apiFetch(url, { method, body: formData });
         if (!response) return;
 
         const result = await response.json();
 
         if (!response.ok) {
-            throw new Error(result.message || "Erreur lors de la création du produit.");
+            throw new Error(result.message || "Erreur lors de l'enregistrement du produit.");
         }
 
         closeProductModal();
@@ -277,7 +384,7 @@ document.getElementById("productForm").addEventListener("submit", async (e) => {
         errorMsg.classList.remove("hidden");
     } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = "Créer le produit";
+        submitBtn.textContent = editingProductId ? "Enregistrer les modifications" : "Créer le produit";
     }
 });
 
@@ -313,13 +420,18 @@ async function loadProducts() {
                         <td class="px-5 py-3">${Number(p.prix).toFixed(2)} €</td>
                         <td class="px-5 py-3">${p.stock_total}</td>
                         <td class="px-5 py-3 ${stockColor}">${p.statut_stock}</td>
-                        <td class="px-5 py-3 text-right">
+                        <td class="px-5 py-3 text-right whitespace-nowrap">
+                            <button data-id="${p.id}" class="editProductBtn text-accent hover:underline text-xs mr-3">Modifier</button>
                             <button data-id="${p.id}" class="deleteProductBtn text-red-500 hover:underline text-xs">Supprimer</button>
                         </td>
                     </tr>
                 `;
             })
             .join("");
+
+        document.querySelectorAll(".editProductBtn").forEach((btn) => {
+            btn.addEventListener("click", () => openProductModal(btn.dataset.id));
+        });
 
         document.querySelectorAll(".deleteProductBtn").forEach((btn) => {
             btn.addEventListener("click", () => deleteProduct(btn.dataset.id));

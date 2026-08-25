@@ -249,7 +249,7 @@
         </main>
     </div>
 
-    <!-- Modal : ajouter un produit -->
+    <!-- Modal : ajouter / modifier un produit -->
     <div id="productModal" class="fixed inset-0 z-[110] hidden">
         <div class="absolute inset-0 bg-textColor/40" id="modalBackdrop"></div>
 
@@ -257,7 +257,7 @@
             <div class="bg-surfaceColor rounded-lg shadow-xl w-full max-w-2xl my-8">
 
                 <div class="flex items-center justify-between px-6 py-5 border-b border-muted/10">
-                    <h3 class="font-headline text-xl">Ajouter un produit</h3>
+                    <h3 id="productModalTitle" class="font-headline text-xl">Ajouter un produit</h3>
                     <button id="closeModalBtn" aria-label="Fermer" class="text-muted hover:text-textColor">✕</button>
                 </div>
 
@@ -338,6 +338,12 @@
                                 </label>
                             </div>
                         </div>
+                        <div>
+                            <label class="flex items-center gap-2 text-sm cursor-pointer w-fit">
+                                <input type="checkbox" id="p_actif" checked class="accent-accent" />
+                                Produit actif (visible sur la boutique)
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Variantes dynamiques -->
@@ -348,6 +354,12 @@
                                 Ajouter une variante</button>
                         </div>
                         <div id="variantsList" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Images existantes (mode édition uniquement) -->
+                    <div id="existingImagesWrapper" class="hidden">
+                        <label class="block text-sm font-medium mb-2">Images actuelles</label>
+                        <div id="existingImagesList" class="flex flex-wrap gap-2 mb-3"></div>
                     </div>
 
                     <!-- Images -->

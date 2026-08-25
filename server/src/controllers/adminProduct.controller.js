@@ -2,6 +2,7 @@
 import prisma from "../config/db.js";
 
 // Formate un produit pour l'affichage dashboard : stock agrégé + statut dérivé
+// + univers/sous-catégorie séparés (utile pour préremplir le formulaire d'édition)
 function formatProduct(product) {
     const stockTotal = product.variants.reduce((sum, v) => sum + v.stock, 0);
 
@@ -9,6 +10,8 @@ function formatProduct(product) {
     if (stockTotal === 0) statutStock = "Rupture";
     else if (stockTotal <= 3) statutStock = `Plus que ${stockTotal} unités`;
     else statutStock = "En stock";
+
+    const hasParent = Boolean(product.category?.parent);
 
     return {
         id: product.id,
@@ -21,10 +24,15 @@ function formatProduct(product) {
         livraison_gratuite: product.livraison_gratuite,
         livraison_express: product.livraison_express,
         categorie: product.category?.nom ?? null,
+        // Univers (racine) et sous-catégorie séparés, pour préremplir les deux
+        // champs distincts du formulaire (la catégorie liée au produit est soit
+        // un univers directement, soit une sous-catégorie avec un parent).
+        univers: hasParent ? product.category.parent.nom : (product.category?.nom ?? null),
+        sous_categorie: hasParent ? product.category.nom : null,
         marque: product.brand?.nom ?? null,
         stock_total: stockTotal,
         statut_stock: statutStock,
-        images: product.images.map((img) => img.url),
+        images: product.images.map((img) => ({ id: img.id, url: img.url })),
         variants: product.variants,
     };
 }
@@ -35,16 +43,18 @@ function parseBoolean(value) {
     return value === "true" || value === "on" || value === "1";
 }
 
+const PRODUCT_INCLUDE = {
+    category: { include: { parent: true } },
+    brand: true,
+    variants: true,
+    images: { orderBy: { ordre: "asc" } },
+};
+
 // GET /api/admin/products
 export const getAllProducts = async (req, res, next) => {
     try {
         const products = await prisma.product.findMany({
-            include: {
-                category: true,
-                brand: true,
-                variants: true,
-                images: { orderBy: { ordre: "asc" } },
-            },
+            include: PRODUCT_INCLUDE,
             orderBy: { date_creation: "desc" },
         });
 
@@ -62,12 +72,7 @@ export const getProductById = async (req, res, next) => {
     try {
         const product = await prisma.product.findUnique({
             where: { id: req.params.id },
-            include: {
-                category: true,
-                brand: true,
-                variants: true,
-                images: { orderBy: { ordre: "asc" } },
-            },
+            include: PRODUCT_INCLUDE,
         });
 
         if (!product) {
@@ -167,7 +172,7 @@ export const createProduct = async (req, res, next) => {
                     })),
                 },
             },
-            include: { category: true, brand: true, variants: true, images: true },
+            include: PRODUCT_INCLUDE,
         });
 
         res.status(201).json({ success: true, product: formatProduct(product) });
@@ -177,9 +182,17 @@ export const createProduct = async (req, res, next) => {
 };
 
 // PUT /api/admin/products/:id
-// Met à jour les champs simples du produit (pas les variantes/images ici, géré séparément pour rester simple).
+// Attend un multipart/form-data (mêmes champs que la création) plus :
+//  - variants : JSON.stringify des variantes désirées ; celles avec un "id"
+//    existant sont mises à jour, celles sans "id" sont créées, celles
+//    présentes en base mais absentes du tableau envoyé sont supprimées.
+//  - deleted_image_ids : JSON.stringify(["imgId1", "imgId2", ...]) — images
+//    existantes à supprimer.
+//  - images : nouveaux fichiers à ajouter (en plus des images existantes non supprimées).
 export const updateProduct = async (req, res, next) => {
     try {
+        const productId = req.params.id;
+
         const {
             nom,
             description,
@@ -191,27 +204,134 @@ export const updateProduct = async (req, res, next) => {
             etat,
             livraison_gratuite,
             livraison_express,
+            variants,
+            deleted_image_ids,
         } = req.body;
 
-        const product = await prisma.product.update({
-            where: { id: req.params.id },
-            data: {
-                ...(nom !== undefined && { nom }),
-                ...(description !== undefined && { description }),
-                ...(category_id !== undefined && { category_id }),
-                ...(brand_id !== undefined && { brand_id }),
-                ...(prix !== undefined && { prix: parseFloat(prix) }),
-                ...(prix_promo !== undefined && { prix_promo: prix_promo ? parseFloat(prix_promo) : null }),
-                ...(actif !== undefined && { actif }),
-                ...(etat !== undefined && { etat }),
-                ...(livraison_gratuite !== undefined && { livraison_gratuite: parseBoolean(livraison_gratuite) }),
-                ...(livraison_express !== undefined && { livraison_express: parseBoolean(livraison_express) }),
-            },
-            include: { category: true, brand: true, variants: true, images: true },
+        const existingProduct = await prisma.product.findUnique({
+            where: { id: productId },
+            include: { variants: true, images: true },
+        });
+
+        if (!existingProduct) {
+            return res.status(404).json({ success: false, message: "Produit introuvable." });
+        }
+
+        const validConditions = ["neuf", "reconditionne", "occasion"];
+        if (etat && !validConditions.includes(etat)) {
+            return res.status(400).json({
+                success: false,
+                message: `État invalide. Valeurs acceptées : ${validConditions.join(", ")}.`,
+            });
+        }
+
+        // --- Variantes désirées (diff avec l'existant) ---
+        let parsedVariants = null;
+        if (variants !== undefined) {
+            try {
+                parsedVariants = JSON.parse(variants);
+            } catch {
+                return res.status(400).json({ success: false, message: "Format des variantes invalide." });
+            }
+            if (!Array.isArray(parsedVariants) || parsedVariants.length === 0) {
+                return res.status(400).json({ success: false, message: "Au moins une variante est requise." });
+            }
+        }
+
+        // --- Images à supprimer ---
+        let imageIdsToDelete = [];
+        if (deleted_image_ids !== undefined && deleted_image_ids !== "") {
+            try {
+                imageIdsToDelete = JSON.parse(deleted_image_ids);
+            } catch {
+                return res.status(400).json({ success: false, message: "Format des images à supprimer invalide." });
+            }
+        }
+
+        const newImageFiles = req.files || [];
+        const remainingExistingCount = existingProduct.images.length - imageIdsToDelete.length;
+        if (remainingExistingCount + newImageFiles.length > 6) {
+            return res.status(400).json({
+                success: false,
+                message: "Un produit ne peut pas avoir plus de 6 images.",
+            });
+        }
+
+        const product = await prisma.$transaction(async (tx) => {
+            // 1) Champs simples du produit
+            await tx.product.update({
+                where: { id: productId },
+                data: {
+                    ...(nom !== undefined && { nom }),
+                    ...(description !== undefined && { description: description || null }),
+                    ...(category_id !== undefined && { category_id }),
+                    ...(brand_id !== undefined && { brand_id }),
+                    ...(prix !== undefined && { prix: parseFloat(prix) }),
+                    ...(prix_promo !== undefined && { prix_promo: prix_promo ? parseFloat(prix_promo) : null }),
+                    ...(actif !== undefined && { actif: parseBoolean(actif) }),
+                    ...(etat !== undefined && { etat }),
+                    ...(livraison_gratuite !== undefined && { livraison_gratuite: parseBoolean(livraison_gratuite) }),
+                    ...(livraison_express !== undefined && { livraison_express: parseBoolean(livraison_express) }),
+                },
+            });
+
+            // 2) Variantes : suppression de celles retirées, update des existantes, création des nouvelles
+            if (parsedVariants) {
+                const existingIds = existingProduct.variants.map((v) => v.id);
+                const sentIds = parsedVariants.filter((v) => v.id).map((v) => v.id);
+                const idsToDelete = existingIds.filter((id) => !sentIds.includes(id));
+
+                if (idsToDelete.length > 0) {
+                    await tx.productVariant.deleteMany({ where: { id: { in: idsToDelete } } });
+                }
+
+                for (const v of parsedVariants) {
+                    const data = {
+                        taille: v.taille,
+                        couleur: v.couleur,
+                        stock: parseInt(v.stock, 10) || 0,
+                        sku: v.sku,
+                    };
+                    if (v.id && existingIds.includes(v.id)) {
+                        await tx.productVariant.update({ where: { id: v.id }, data });
+                    } else {
+                        await tx.productVariant.create({ data: { ...data, product_id: productId } });
+                    }
+                }
+            }
+
+            // 3) Images : suppression des retirées (DB uniquement, pas de suppression Cloudinary
+            //    ici — à ajouter séparément si besoin de faire le ménage sur le storage)
+            if (imageIdsToDelete.length > 0) {
+                await tx.productImage.deleteMany({ where: { id: { in: imageIdsToDelete } } });
+            }
+
+            if (newImageFiles.length > 0) {
+                const currentMaxOrdre = await tx.productImage.count({ where: { product_id: productId } });
+                await tx.productImage.createMany({
+                    data: newImageFiles.map((file, index) => ({
+                        product_id: productId,
+                        url: file.path,
+                        ordre: currentMaxOrdre + index,
+                    })),
+                });
+            }
+
+            return tx.product.findUnique({
+                where: { id: productId },
+                include: PRODUCT_INCLUDE,
+            });
         });
 
         res.status(200).json({ success: true, product: formatProduct(product) });
     } catch (error) {
+        // Une variante déjà référencée par une commande ne peut pas être supprimée (contrainte FK)
+        if (error.code === "P2003") {
+            return res.status(409).json({
+                success: false,
+                message: "Impossible de supprimer une variante déjà utilisée dans une commande.",
+            });
+        }
         next(error);
     }
 };
