@@ -9,6 +9,11 @@ import orderRoutes from "./routes/order.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import vendorApplicationRoutes from "./routes/vendorApplication.routes.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
+import path from "path";
+import { fileURLToPath } from "url";
+import adminAuthRoutes from "./routes/adminAuth.routes.js";
+import adminProductRoutes from "./routes/adminProduct.routes.js";
+import adminDashboardRoutes from "./routes/adminDashboard.routes.js";
 
 dotenv.config();
 
@@ -34,5 +39,13 @@ app.use("/api/vendor-application", vendorApplicationRoutes);
 
 // Middleware de gestion des erreurs
 app.use(errorMiddleware);
+
+app.use("/api/admin/products", adminProductRoutes);
+app.use("/api/admin/dashboard", adminDashboardRoutes);
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "../public")));
 
 export default app;

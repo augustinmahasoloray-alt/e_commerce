@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard — StepUp Admin</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        backgroundColor: "var(--color-background)",
+                        surfaceColor: "var(--color-surface)",
+                        textColor: "var(--color-text)",
+                        accent: "var(--color-accent)",
+                        muted: "var(--color-muted)",
+                    },
+                    fontFamily: {
+                        display: ["Qurova", "serif"],
+                        headline: ["Metal", "sans-serif"],
+                        body: ["Albert Sans", "sans-serif"],
+                    },
+                },
+            },
+        };
+    </script>
+    <link rel="stylesheet" href="/admin/css/style.css" />
+    <script src="/admin/js/theme.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="font-body bg-backgroundColor text-textColor min-h-screen">
+
+    <!-- Garde d'accès : redirige vers la connexion si pas de token -->
+    <script>
+        if (!localStorage.getItem("admin_token")) {
+            window.location.href = "/admin/index.html";
+        }
+    </script>
+
+    <div class="flex min-h-screen">
+
+        <!-- Sidebar -->
+        <aside class="w-64 bg-surfaceColor border-r border-muted/10 flex flex-col shrink-0">
+            <div class="px-6 py-6 border-b border-muted/10">
+                <h1 class="font-headline text-xl">
+                    StepUp<span class="text-accent">.admin</span>
+                </h1>
+            </div>
+
+            <nav class="flex-1 px-4 py-6 space-y-1">
+                <button data-section="overview" class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium bg-accent text-backgroundColor">
+                    Vue d'ensemble
+                </button>
+                <button data-section="products" class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
+                    Produits
+                </button>
+                <button data-section="categories" class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
+                    Catégories & Marques
+                </button>
+                <button data-section="orders" class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
+                    Commandes
+                </button>
+            </nav>
+
+            <div class="px-4 py-6 border-t border-muted/10 space-y-2">
+                <button onclick="toggleTheme()" class="w-full text-left px-4 py-2.5 rounded-md text-sm text-muted hover:bg-backgroundColor transition-colors">
+                    🌓 Changer de thème
+                </button>
+                <button id="logoutBtn" class="w-full text-left px-4 py-2.5 rounded-md text-sm text-red-500 hover:bg-backgroundColor transition-colors">
+                    Déconnexion
+                </button>
+            </div>
+        </aside>
+
+        <!-- Contenu principal -->
+        <main class="flex-1 p-8 overflow-y-auto">
+
+            <!-- Vue d'ensemble -->
+            <section id="section-overview" class="dashboard-section">
+                <h2 class="font-headline text-2xl mb-6">Vue d'ensemble</h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+                    <div class="bg-surfaceColor rounded-lg p-5">
+                        <p class="text-xs text-muted mb-1">Produits actifs</p>
+                        <p id="statProducts" class="font-headline text-2xl">—</p>
+                    </div>
+                    <div class="bg-surfaceColor rounded-lg p-5">
+                        <p class="text-xs text-muted mb-1">Commandes en attente</p>
+                        <p id="statOrders" class="font-headline text-2xl">—</p>
+                    </div>
+                    <div class="bg-surfaceColor rounded-lg p-5">
+                        <p class="text-xs text-muted mb-1">Chiffre d'affaires</p>
+                        <p id="statRevenue" class="font-headline text-2xl">—</p>
+                    </div>
+                </div>
+
+                <div class="bg-surfaceColor rounded-lg p-6">
+                    <h3 class="text-sm font-medium mb-4">Produits par catégorie</h3>
+                    <canvas id="categoryChart" height="90"></canvas>
+                </div>
+            </section>
+
+            <!-- Produits -->
+            <section id="section-products" class="dashboard-section hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="font-headline text-2xl">Produits</h2>
+                    <button id="openAddProduct" class="bg-accent text-backgroundColor text-sm font-medium px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity">
+                        + Ajouter un produit
+                    </button>
+                </div>
+
+                <div class="bg-surfaceColor rounded-lg overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-muted border-b border-muted/10">
+                                <th class="px-5 py-3 font-medium">Nom</th>
+                                <th class="px-5 py-3 font-medium">Catégorie</th>
+                                <th class="px-5 py-3 font-medium">Prix</th>
+                                <th class="px-5 py-3 font-medium">Stock</th>
+                                <th class="px-5 py-3 font-medium">Statut</th>
+                                <th class="px-5 py-3 font-medium"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTableBody">
+                            <tr>
+                                <td colspan="6" class="px-5 py-8 text-center text-muted">Chargement...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Catégories & Marques (placeholder) -->
+            <section id="section-categories" class="dashboard-section hidden">
+                <h2 class="font-headline text-2xl mb-6">Catégories & Marques</h2>
+                <p class="text-muted text-sm">À implémenter.</p>
+            </section>
+
+            <!-- Commandes (placeholder) -->
+            <section id="section-orders" class="dashboard-section hidden">
+                <h2 class="font-headline text-2xl mb-6">Commandes</h2>
+                <p class="text-muted text-sm">À implémenter.</p>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Modal : ajouter un produit -->
+    <div id="productModal" class="fixed inset-0 z-[110] hidden">
+        <div class="absolute inset-0 bg-textColor/40" id="modalBackdrop"></div>
+
+        <div class="absolute inset-0 flex items-center justify-center p-4 overflow-y-auto">
+            <div class="bg-surfaceColor rounded-lg shadow-xl w-full max-w-2xl my-8">
+
+                <div class="flex items-center justify-between px-6 py-5 border-b border-muted/10">
+                    <h3 class="font-headline text-xl">Ajouter un produit</h3>
+                    <button id="closeModalBtn" aria-label="Fermer" class="text-muted hover:text-textColor">✕</button>
+                </div>
+
+                <form id="productForm" class="px-6 py-6 space-y-5">
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Nom du produit</label>
+                        <input type="text" id="p_nom" required
+                            class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Description</label>
+                        <textarea id="p_description" rows="3"
+                            class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Catégorie</label>
+                            <select id="p_category" required
+                                class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm">
+                                <option value="">Chargement...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Marque</label>
+                            <select id="p_brand" required
+                                class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm">
+                                <option value="">Chargement...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Prix (€)</label>
+                            <input type="number" id="p_prix" step="0.01" min="0" required
+                                class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Prix promo (€, optionnel)</label>
+                            <input type="number" id="p_prix_promo" step="0.01" min="0"
+                                class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm" />
+                        </div>
+                    </div>
+
+                    <!-- Variantes dynamiques -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-sm font-medium">Variantes (taille / couleur / stock)</label>
+                            <button type="button" id="addVariantBtn" class="text-xs text-accent hover:underline">+ Ajouter une variante</button>
+                        </div>
+                        <div id="variantsList" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Images -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Images (jusqu'à 6)</label>
+                        <input type="file" id="p_images" accept="image/jpeg, image/png, image/webp" multiple
+                            class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-accent file:text-backgroundColor file:text-sm file:font-medium file:cursor-pointer" />
+                        <div id="imagePreviews" class="flex flex-wrap gap-2 mt-3"></div>
+                    </div>
+
+                    <p id="productFormError" class="text-sm text-red-500 hidden"></p>
+
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" id="cancelProductBtn"
+                            class="flex-1 px-6 py-3 border border-muted/30 rounded-md text-sm hover:bg-backgroundColor transition-colors">
+                            Annuler
+                        </button>
+                        <button type="submit" id="submitProductBtn"
+                            class="flex-1 bg-accent text-backgroundColor text-sm font-medium py-3 rounded-md hover:opacity-90 transition-opacity disabled:opacity-50">
+                            Créer le produit
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/admin/js/api.js"></script>
+    <script>
+        // Navigation entre sections
+        document.querySelectorAll(".nav-link").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll(".nav-link").forEach((b) => {
+                    b.classList.remove("bg-accent", "text-backgroundColor");
+                    b.classList.add("text-muted");
+                });
+                btn.classList.add("bg-accent", "text-backgroundColor");
+                btn.classList.remove("text-muted");
+
+                document.querySelectorAll(".dashboard-section").forEach((s) => s.classList.add("hidden"));
+                document.getElementById(`section-${btn.dataset.section}`).classList.remove("hidden");
+            });
+        });
+
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            localStorage.removeItem("admin_token");
+            localStorage.removeItem("admin_user");
+            window.location.href = "/admin/index.html";
+        });
+    </script>
+
+    <script src="/admin/js/products.js"></script>
+    <script src="/admin/js/dashboard.js"></script>
+</body>
+</html>

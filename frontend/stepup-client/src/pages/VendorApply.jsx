@@ -68,21 +68,23 @@ export default function VendorApply() {
 
         try {
             const data = new FormData();
-            // Ajouter les champs texte
             Object.keys(formData).forEach((key) => {
                 if (key !== "logo" && formData[key]) {
                     data.append(key, formData[key]);
                 }
             });
-            // Ajouter le fichier logo (si présent)
             if (formData.logo) {
                 data.append("logo", formData.logo);
             }
 
-            const response = await fetch("http://localhost:3000/vendors/apply", {
+            const token = localStorage.getItem("token");
+
+            const response = await fetch("http://localhost:3000/api/vendor-application/apply", {
                 method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
                 body: data,
-                credentials: "include", // Pour envoyer les cookies
             });
 
             const result = await response.json();
