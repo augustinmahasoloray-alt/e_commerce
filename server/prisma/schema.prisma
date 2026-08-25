@@ -59,6 +59,13 @@ enum TransactionStatus {
   echoue
 }
 
+// NOUVEAU — état du produit (filtre "État" de la Boutique)
+enum ProductCondition {
+  neuf
+  reconditionne
+  occasion
+}
+
 // ============ USERS & ADDRESSES ============
 
 model User {
@@ -98,9 +105,6 @@ model Address {
 }
 
 // ============ VENDORS ============
-// Un vendeur = un compte User (role = vendeur) + un profil boutique.
-// La relation 1-1 permet de garder l'auth centralisée sur User
-// tout en isolant les infos commerciales du vendeur.
 
 model Vendor {
   id               String       @id @default(uuid())
@@ -110,11 +114,9 @@ model Vendor {
   description      String?
   logo_url         String?
   telephone_pro    String?
-  // Infos de règlement (MVola / Orange Money / autre) — stockées
-  // en clair ici pour la V1, à chiffrer/segmenter si besoin plus tard.
   moyen_paiement   String?
   numero_paiement  String?
-  taux_commission  Decimal      @default(10.00) @db.Decimal(5, 2) // en %
+  taux_commission  Decimal      @default(10.00) @db.Decimal(5, 2)
   statut           VendorStatus @default(en_attente)
   date_creation    DateTime     @default(now())
   date_validation  DateTime?
@@ -144,11 +146,6 @@ model VendorApplication {
   @@map("vendor_applications")
 }
 
-// Ledger simple des mouvements financiers d'un vendeur.
-// Permet de calculer son solde par simple somme (credit - debit)
-// sans dépendre d'un vrai split-payment côté provider (MVola/OM
-// ne le supportent pas nativement) : la plateforme encaisse le
-// paiement client en une fois, puis crédite le vendeur ici.
 model VendorTransaction {
   id              String             @id @default(uuid())
   vendor_id       String
@@ -177,6 +174,11 @@ model Category {
   children Category[] @relation("CategoryToSubcategory")
   products Product[]
 
+  // NOUVEAU — les marques disponibles pour cet univers (catégorie racine).
+  // On lie généralement une marque à la catégorie RACINE (ex: "Électronique"),
+  // pas à chaque sous-catégorie ("Écrans", "Casques"...).
+  brands   Brand[]    @relation("BrandCategories")
+
   @@map("categories")
 }
 
@@ -185,7 +187,9 @@ model Brand {
   nom      String
   logo_url String?
 
-  products Product[]
+  products   Product[]
+  // NOUVEAU — univers (catégories racines) où cette marque est proposée
+  categories Category[] @relation("BrandCategories")
 
   @@map("brands")
 }
@@ -193,17 +197,22 @@ model Brand {
 // ============ PRODUCTS ============
 
 model Product {
-  id            String   @id @default(uuid())
+  id            String           @id @default(uuid())
   vendor_id     String
   nom           String
   description   String?
   category_id   String
   brand_id      String
-  prix          Decimal  @db.Decimal(10, 2)
-  prix_promo    Decimal? @db.Decimal(10, 2)
-  note_moyenne  Decimal  @default(0) @db.Decimal(3, 2)
-  actif         Boolean  @default(true)
-  date_creation DateTime @default(now())
+  prix          Decimal          @db.Decimal(10, 2)
+  prix_promo    Decimal?         @db.Decimal(10, 2)
+  note_moyenne  Decimal          @default(0) @db.Decimal(3, 2)
+  actif         Boolean          @default(true)
+  date_creation DateTime         @default(now())
+
+  // NOUVEAU — champs pour parité avec les filtres de la Boutique
+  etat               ProductCondition @default(neuf)
+  livraison_gratuite Boolean          @default(false)
+  livraison_express  Boolean          @default(false)
 
   vendor   Vendor           @relation(fields: [vendor_id], references: [id], onDelete: Cascade)
   category Category         @relation(fields: [category_id], references: [id])
@@ -243,8 +252,6 @@ model ProductImage {
 }
 
 // ============ CART ============
-// Inchangé : le panier reste multi-vendeurs par nature,
-// le split se fait uniquement au moment de la commande.
 
 model Cart {
   id      String @id @default(uuid())
@@ -284,11 +291,6 @@ model Wishlist {
 }
 
 // ============ ORDERS ============
-// Order = la commande "client" globale (1 paiement, 1 adresse, 1 coupon).
-// VendorOrder = la déclinaison par vendeur (1 commande client peut
-// générer plusieurs VendorOrder si le panier contient plusieurs boutiques).
-// C'est VendorOrder qui porte le statut de traitement/livraison réel,
-// puisque chaque vendeur gère sa propre expédition indépendamment.
 
 model Order {
   id              String      @id @default(uuid())
@@ -313,9 +315,9 @@ model VendorOrder {
   order_id           String
   vendor_id          String
   statut             OrderStatus @default(en_attente)
-  montant_total      Decimal     @db.Decimal(10, 2) // somme des OrderItem de ce vendeur
-  montant_commission Decimal     @db.Decimal(10, 2) // part plateforme
-  montant_net        Decimal     @db.Decimal(10, 2) // ce que touche le vendeur
+  montant_total      Decimal     @db.Decimal(10, 2)
+  montant_commission Decimal     @db.Decimal(10, 2)
+  montant_net        Decimal     @db.Decimal(10, 2)
   date_maj           DateTime    @updatedAt
 
   order        Order               @relation(fields: [order_id], references: [id], onDelete: Cascade)

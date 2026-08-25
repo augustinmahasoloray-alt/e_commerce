@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -31,6 +32,7 @@
     <script src="/admin/js/theme.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body class="font-body bg-backgroundColor text-textColor min-h-screen">
 
     <!-- Garde d'accès : redirige vers la connexion si pas de token -->
@@ -51,25 +53,31 @@
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-1">
-                <button data-section="overview" class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium bg-accent text-backgroundColor">
+                <button data-section="overview"
+                    class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium bg-accent text-backgroundColor">
                     Vue d'ensemble
                 </button>
-                <button data-section="products" class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
+                <button data-section="products"
+                    class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
                     Produits
                 </button>
-                <button data-section="categories" class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
+                <button data-section="categories"
+                    class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
                     Catégories & Marques
                 </button>
-                <button data-section="orders" class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
+                <button data-section="orders"
+                    class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
                     Commandes
                 </button>
             </nav>
 
             <div class="px-4 py-6 border-t border-muted/10 space-y-2">
-                <button onclick="toggleTheme()" class="w-full text-left px-4 py-2.5 rounded-md text-sm text-muted hover:bg-backgroundColor transition-colors">
+                <button onclick="toggleTheme()"
+                    class="w-full text-left px-4 py-2.5 rounded-md text-sm text-muted hover:bg-backgroundColor transition-colors">
                     🌓 Changer de thème
                 </button>
-                <button id="logoutBtn" class="w-full text-left px-4 py-2.5 rounded-md text-sm text-red-500 hover:bg-backgroundColor transition-colors">
+                <button id="logoutBtn"
+                    class="w-full text-left px-4 py-2.5 rounded-md text-sm text-red-500 hover:bg-backgroundColor transition-colors">
                     Déconnexion
                 </button>
             </div>
@@ -107,7 +115,8 @@
             <section id="section-products" class="dashboard-section hidden">
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="font-headline text-2xl">Produits</h2>
-                    <button id="openAddProduct" class="bg-accent text-backgroundColor text-sm font-medium px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity">
+                    <button id="openAddProduct"
+                        class="bg-accent text-backgroundColor text-sm font-medium px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity">
                         + Ajouter un produit
                     </button>
                 </div>
@@ -186,7 +195,7 @@
                             <label class="block text-sm font-medium mb-2">Marque</label>
                             <select id="p_brand" required
                                 class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm">
-                                <option value="">Chargement...</option>
+                                <option value="">Choisis d'abord une catégorie...</option>
                             </select>
                         </div>
                     </div>
@@ -204,11 +213,38 @@
                         </div>
                     </div>
 
+                    <!-- NOUVEAU : État + Livraison -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">État</label>
+                            <select id="p_etat"
+                                class="w-full px-4 py-3 rounded-md bg-backgroundColor border border-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent outline-none text-sm">
+                                <option value="neuf">Neuf</option>
+                                <option value="reconditionne">Reconditionné</option>
+                                <option value="occasion">Occasion</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Livraison</label>
+                            <div class="flex items-center gap-4 py-3">
+                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" id="p_livraison_gratuite" class="accent-accent" />
+                                    Gratuite
+                                </label>
+                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" id="p_livraison_express" class="accent-accent" />
+                                    Express
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Variantes dynamiques -->
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <label class="block text-sm font-medium">Variantes (taille / couleur / stock)</label>
-                            <button type="button" id="addVariantBtn" class="text-xs text-accent hover:underline">+ Ajouter une variante</button>
+                            <button type="button" id="addVariantBtn" class="text-xs text-accent hover:underline">+
+                                Ajouter une variante</button>
                         </div>
                         <div id="variantsList" class="space-y-2"></div>
                     </div>
@@ -265,4 +301,5 @@
     <script src="/admin/js/products.js"></script>
     <script src="/admin/js/dashboard.js"></script>
 </body>
+
 </html>

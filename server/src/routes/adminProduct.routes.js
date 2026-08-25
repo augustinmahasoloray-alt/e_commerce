@@ -1,3 +1,4 @@
+// server/src/routes/adminProduct.routes.js
 import express from "express";
 import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
@@ -11,6 +12,7 @@ import {
     updateProduct,
     deleteProduct,
     getCategoriesAndBrands,
+    getTopSellingProducts,
 } from "../controllers/adminProduct.controller.js";
 
 const router = express.Router();
@@ -30,6 +32,7 @@ const upload = multer({ storage });
 router.use(authMiddleware, adminMiddleware);
 
 router.get("/meta/categories-brands", getCategoriesAndBrands);
+router.get("/meta/top-ventes", getTopSellingProducts);
 router.get("/", getAllProducts);
 router.get("/:id", getProductById);
 router.post("/", upload.array("images", 6), createProduct);

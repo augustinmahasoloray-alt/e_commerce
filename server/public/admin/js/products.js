@@ -2,6 +2,12 @@
 
 let variantCount = 0;
 
+// Map "id de catégorie (feuille ou racine)" -> "id de la catégorie racine (univers)".
+// Reconstruite à chaque chargement des catégories.
+let categoryToUniversMap = {};
+// Toutes les marques chargées, avec leurs univers liés (result.brands du backend).
+let allBrands = [];
+
 // ============ Ouverture / fermeture du modal ============
 
 function openProductModal() {
@@ -37,17 +43,22 @@ async function loadCategoriesAndBrands() {
         if (!response) return;
         const result = await response.json();
 
+        allBrands = result.brands;
+        categoryToUniversMap = {};
+
         categorySelect.innerHTML = '<option value="">Sélectionner...</option>';
         result.categories.forEach((cat) => {
             // On ne propose que les catégories "feuilles" (avec parent) ou sans enfants,
             // pour éviter de rattacher un produit directement à un "univers" racine.
             if (cat.children.length === 0) {
+                categoryToUniversMap[cat.id] = cat.id;
                 const opt = document.createElement("option");
                 opt.value = cat.id;
                 opt.textContent = cat.nom;
                 categorySelect.appendChild(opt);
             } else {
                 cat.children.forEach((child) => {
+                    categoryToUniversMap[child.id] = cat.id;
                     const opt = document.createElement("option");
                     opt.value = child.id;
                     opt.textContent = `${cat.nom} — ${child.nom}`;
@@ -56,17 +67,47 @@ async function loadCategoriesAndBrands() {
             }
         });
 
-        brandSelect.innerHTML = '<option value="">Sélectionner...</option>';
-        result.brands.forEach((brand) => {
-            const opt = document.createElement("option");
-            opt.value = brand.id;
-            opt.textContent = brand.nom;
-            brandSelect.appendChild(opt);
-        });
+        // Marque désactivée tant qu'aucune catégorie n'est choisie
+        brandSelect.innerHTML = '<option value="">Choisis d\'abord une catégorie...</option>';
+        brandSelect.disabled = true;
     } catch (err) {
         console.error("Erreur chargement catégories/marques :", err);
     }
 }
+
+// Filtre et repeuple le <select> Marque selon l'univers de la catégorie choisie.
+function updateBrandOptionsForCategory(categoryId) {
+    const brandSelect = document.getElementById("p_brand");
+
+    if (!categoryId) {
+        brandSelect.innerHTML = '<option value="">Choisis d\'abord une catégorie...</option>';
+        brandSelect.disabled = true;
+        return;
+    }
+
+    const universId = categoryToUniversMap[categoryId];
+    const filteredBrands = allBrands.filter((brand) =>
+        brand.categories.some((c) => c.id === universId)
+    );
+
+    brandSelect.disabled = false;
+    if (filteredBrands.length === 0) {
+        brandSelect.innerHTML = '<option value="">Aucune marque pour cet univers</option>';
+        return;
+    }
+
+    brandSelect.innerHTML = '<option value="">Sélectionner...</option>';
+    filteredBrands.forEach((brand) => {
+        const opt = document.createElement("option");
+        opt.value = brand.id;
+        opt.textContent = brand.nom;
+        brandSelect.appendChild(opt);
+    });
+}
+
+document.getElementById("p_category").addEventListener("change", (e) => {
+    updateBrandOptionsForCategory(e.target.value);
+});
 
 // ============ Variantes dynamiques ============
 
@@ -154,6 +195,10 @@ document.getElementById("productForm").addEventListener("submit", async (e) => {
 
         const prixPromo = document.getElementById("p_prix_promo").value;
         if (prixPromo) formData.append("prix_promo", prixPromo);
+
+        formData.append("etat", document.getElementById("p_etat").value);
+        formData.append("livraison_gratuite", document.getElementById("p_livraison_gratuite").checked);
+        formData.append("livraison_express", document.getElementById("p_livraison_express").checked);
 
         formData.append("variants", JSON.stringify(variants));
 
