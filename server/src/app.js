@@ -14,6 +14,8 @@ import vendorApplicationRoutes from "./routes/vendorApplication.routes.js";
 import adminAuthRoutes from "./routes/adminAuth.routes.js";
 import adminProductRoutes from "./routes/adminProduct.routes.js";
 import adminDashboardRoutes from "./routes/adminDashboard.routes.js";
+import adminCategoryRoutes from "./routes/adminCategory.routes.js";
+import adminBrandRoutes from "./routes/adminBrand.routes.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
 
 dotenv.config();
@@ -44,6 +46,8 @@ app.use("/api/vendor-application", vendorApplicationRoutes);
 app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/admin/products", adminProductRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
+app.use("/api/admin/categories", adminCategoryRoutes);
+app.use("/api/admin/brands", adminBrandRoutes);
 
 // Middleware de gestion des erreurs — TOUJOURS en dernier, après toutes les routes
 app.use(errorMiddleware);

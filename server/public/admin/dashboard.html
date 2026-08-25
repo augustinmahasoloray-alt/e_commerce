@@ -143,9 +143,79 @@
             </section>
 
             <!-- Catégories & Marques (placeholder) -->
+            <!-- Catégories & Marques -->
             <section id="section-categories" class="dashboard-section hidden">
                 <h2 class="font-headline text-2xl mb-6">Catégories & Marques</h2>
-                <p class="text-muted text-sm">À implémenter.</p>
+
+                <div class="grid md:grid-cols-2 gap-6 mb-8">
+
+                    <!-- Création d'univers / sous-catégorie -->
+                    <div class="bg-surfaceColor rounded-lg p-6">
+                        <h3 class="text-sm font-medium mb-4">Nouvelle catégorie</h3>
+                        <form id="categoryForm" class="space-y-4">
+                            <div>
+                                <label class="block text-xs text-muted mb-1">Type</label>
+                                <select id="cat_type"
+                                    class="w-full px-3 py-2 rounded-md bg-backgroundColor border border-muted/30 outline-none text-sm">
+                                    <option value="univers">Nouvel univers (ex: Vêtements)</option>
+                                    <option value="sous-categorie">Sous-catégorie d'un univers existant</option>
+                                </select>
+                            </div>
+                            <div id="cat_parent_wrapper" class="hidden">
+                                <label class="block text-xs text-muted mb-1">Univers parent</label>
+                                <select id="cat_parent"
+                                    class="w-full px-3 py-2 rounded-md bg-backgroundColor border border-muted/30 outline-none text-sm">
+                                    <option value="">Chargement...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-muted mb-1">Nom</label>
+                                <input type="text" id="cat_nom" required placeholder="Ex : Vêtements, Casquettes..."
+                                    class="w-full px-3 py-2 rounded-md bg-backgroundColor border border-muted/30 outline-none text-sm focus:ring-2 focus:ring-accent" />
+                            </div>
+                            <p id="categoryFormError" class="text-sm text-red-500 hidden"></p>
+                            <button type="submit"
+                                class="w-full bg-accent text-backgroundColor text-sm font-medium py-2.5 rounded-md hover:opacity-90 transition-opacity">
+                                Créer
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Création de marque -->
+                    <div class="bg-surfaceColor rounded-lg p-6">
+                        <h3 class="text-sm font-medium mb-4">Nouvelle marque</h3>
+                        <form id="brandForm" class="space-y-4">
+                            <div>
+                                <label class="block text-xs text-muted mb-1">Nom</label>
+                                <input type="text" id="brand_nom" required placeholder="Ex : Under Armour..."
+                                    class="w-full px-3 py-2 rounded-md bg-backgroundColor border border-muted/30 outline-none text-sm focus:ring-2 focus:ring-accent" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-muted mb-1">Univers où proposer cette marque</label>
+                                <div id="brand_universes" class="flex flex-col gap-2 max-h-32 overflow-y-auto">
+                                    <!-- rempli en JS par des checkboxes -->
+                                </div>
+                            </div>
+                            <p id="brandFormError" class="text-sm text-red-500 hidden"></p>
+                            <button type="submit"
+                                class="w-full bg-accent text-backgroundColor text-sm font-medium py-2.5 rounded-md hover:opacity-90 transition-opacity">
+                                Créer
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Liste des univers + sous-catégories -->
+                <div class="bg-surfaceColor rounded-lg p-6 mb-6">
+                    <h3 class="text-sm font-medium mb-4">Univers & sous-catégories</h3>
+                    <div id="categoriesTree" class="space-y-4 text-sm">Chargement...</div>
+                </div>
+
+                <!-- Liste des marques -->
+                <div class="bg-surfaceColor rounded-lg p-6">
+                    <h3 class="text-sm font-medium mb-4">Marques</h3>
+                    <div id="brandsList" class="flex flex-wrap gap-2">Chargement...</div>
+                </div>
             </section>
 
             <!-- Commandes (placeholder) -->
@@ -300,6 +370,7 @@
 
     <script src="/admin/js/products.js"></script>
     <script src="/admin/js/dashboard.js"></script>
+    <script src="/admin/js/categories.js"></script>
 </body>
 
 </html>
