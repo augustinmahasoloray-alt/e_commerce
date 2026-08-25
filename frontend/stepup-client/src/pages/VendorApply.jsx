@@ -13,13 +13,13 @@ export default function VendorApply() {
         description: "",
         moyen_paiement: "",
         numero_paiement: "",
-        logo: null, // Fichier de l'image
+        logo: null,
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
-    const [previewUrl, setPreviewUrl] = useState(null); // URL de prévisualisation
+    const [previewUrl, setPreviewUrl] = useState(null);
     const fileInputRef = useRef(null);
 
     const navigate = useNavigate();
@@ -32,6 +32,11 @@ export default function VendorApply() {
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            // Vérifie la taille du fichier (5 Mo max)
+            if (file.size > 5 * 1024 * 1024) {
+                setError("Le fichier est trop volumineux (max 5 Mo).");
+                return;
+            }
             setFormData((prev) => ({ ...prev, logo: file }));
 
             // Créer une URL de prévisualisation
@@ -43,10 +48,23 @@ export default function VendorApply() {
         }
     };
 
+    const triggerFileInput = () => {
+        fileInputRef.current.click();
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
         setError(null);
+
+        // Validation des champs requis
+        const requiredFields = ["nom", "prenom", "email", "nom_boutique", "moyen_paiement", "numero_paiement"];
+        const isValid = requiredFields.every((field) => formData[field].trim() !== "");
+        if (!isValid) {
+            setError("Veuillez remplir tous les champs obligatoires.");
+            setIsSubmitting(false);
+            return;
+        }
 
         try {
             const data = new FormData();
@@ -61,9 +79,10 @@ export default function VendorApply() {
                 data.append("logo", formData.logo);
             }
 
-            const response = await fetch("http://localhost:3000/api/vendor-application/apply", {
+            const response = await fetch("http://localhost:3000/vendors/apply", {
                 method: "POST",
-                body: data, // FormData gère automatiquement le type multipart/form-data
+                body: data,
+                credentials: "include", // Pour envoyer les cookies
             });
 
             const result = await response.json();
@@ -79,10 +98,6 @@ export default function VendorApply() {
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const triggerFileInput = () => {
-        fileInputRef.current.click();
     };
 
     if (success) {
@@ -130,7 +145,7 @@ export default function VendorApply() {
                     {/* Partie droite : Formulaire */}
                     <div className="bg-surfaceColor p-8 rounded-lg shadow-lg">
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            {/* Photo de profil / Logo de la boutique */}
+                            {/* Logo de la boutique */}
                             <div>
                                 <label className="block text-sm font-medium text-textColor mb-2">
                                     Logo de ta boutique
