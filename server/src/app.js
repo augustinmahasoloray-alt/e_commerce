@@ -19,6 +19,7 @@ import adminCategoryRoutes from "./routes/adminCategory.routes.js";
 import adminBrandRoutes from "./routes/adminBrand.routes.js";
 import adminOrderRoutes from "./routes/adminOrder.routes.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
+import adminUserRoutes from "./routes/adminUser.routes.js";
 
 dotenv.config();
 
@@ -53,6 +54,8 @@ app.use("/api/admin/dashboard", adminDashboardRoutes);
 app.use("/api/admin/categories", adminCategoryRoutes);
 app.use("/api/admin/brands", adminBrandRoutes);
 app.use("/api/admin/orders", adminOrderRoutes);
+app.use("/api/admin/users", adminUserRoutes);
+
 
 // Middleware de gestion des erreurs
 app.use(errorMiddleware);

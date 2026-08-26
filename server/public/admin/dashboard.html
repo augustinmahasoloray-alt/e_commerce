@@ -243,7 +243,60 @@
             <!-- Commandes (placeholder) -->
             <section id="section-orders" class="dashboard-section hidden">
                 <h2 class="font-headline text-2xl mb-6">Commandes</h2>
-                <p class="text-muted text-sm">À implémenter.</p>
+
+                <div id="orderStatusTabs" class="flex flex-wrap gap-2 mb-6"></div>
+
+                <div class="bg-surfaceColor rounded-lg overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-muted border-b border-muted/10">
+                                <th class="px-5 py-3 font-medium">Client</th>
+                                <th class="px-5 py-3 font-medium">Date</th>
+                                <th class="px-5 py-3 font-medium">Montant</th>
+                                <th class="px-5 py-3 font-medium">Paiement</th>
+                                <th class="px-5 py-3 font-medium">Livraison</th>
+                                <th class="px-5 py-3 font-medium">Statut</th>
+                                <th class="px-5 py-3 font-medium"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody">
+                            <tr>
+                                <td colspan="7" class="px-5 py-8 text-center text-muted">Chargement...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Users -->
+            <section id="section-users" class="dashboard-section hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="font-headline text-2xl">Clients & Vendeurs</h2>
+                    <input type="text" id="userSearchInput" placeholder="Rechercher par nom ou email..."
+                        class="px-4 py-2 rounded-md bg-surfaceColor border border-muted/30 outline-none text-sm w-64" />
+                </div>
+
+                <div id="userRoleTabs" class="flex flex-wrap gap-2 mb-6"></div>
+
+                <div class="bg-surfaceColor rounded-lg overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-muted border-b border-muted/10">
+                                <th class="px-5 py-3 font-medium">Nom</th>
+                                <th class="px-5 py-3 font-medium">Email</th>
+                                <th class="px-5 py-3 font-medium">Téléphone</th>
+                                <th class="px-5 py-3 font-medium">Inscrit le</th>
+                                <th class="px-5 py-3 font-medium">Statut</th>
+                                <th class="px-5 py-3 font-medium"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="6" class="px-5 py-8 text-center text-muted">Chargement...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
 
         </main>
@@ -387,6 +440,20 @@
         </div>
     </div>
 
+    <div id="orderModal" class="fixed inset-0 z-[110] hidden">
+        <div class="absolute inset-0 bg-textColor/40" id="orderModalBackdrop"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4 overflow-y-auto">
+            <div class="bg-surfaceColor rounded-lg shadow-xl w-full max-w-lg my-8">
+                <div class="flex items-center justify-between px-6 py-5 border-b border-muted/10">
+                    <h3 class="font-headline text-xl">Détail commande</h3>
+                    <button id="closeOrderModalBtn" aria-label="Fermer"
+                        class="text-muted hover:text-textColor">✕</button>
+                </div>
+                <div id="orderModalBody" class="px-6 py-6"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="/admin/js/api.js"></script>
     <script>
         // Navigation entre sections
@@ -414,6 +481,8 @@
     <script src="/admin/js/products.js"></script>
     <script src="/admin/js/dashboard.js"></script>
     <script src="/admin/js/categories.js"></script>
+    <script src="/admin/js/orders.js"></script>
+    <script src="/admin/js/users.js"></script>
 </body>
 
 </html>
