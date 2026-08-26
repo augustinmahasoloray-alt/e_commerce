@@ -4,7 +4,7 @@ import {
   SlidersHorizontal, Star, Heart, Scale, Grid3x3, List,
   ChevronDown, X, Zap, Flame, AlertTriangle,
 } from "lucide-react";
-import { useCart } from "../contexts/CartContext";
+import { useCart } from "../contexts/CartContext.jsx";
 
 /**
  * StepUp — Boutique (catalogue unique, mono-vendeur)

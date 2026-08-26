@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Search, ShoppingCart, User, Menu, X, LayoutDashboard, Sun, Moon } from "lucide-react";
-import { AuthContext } from "../../context/AuthContext";
-import { ThemeContext } from "../../context/ThemeContext";
+import { AuthContext } from "../../contexts/AuthContext";
+import { ThemeContext } from "../../contexts/ThemeContext";
 import useScrolled from "../../hooks/useScrolled";
 
 const links = [

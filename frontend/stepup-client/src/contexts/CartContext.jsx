@@ -1,14 +1,14 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { useAuth } from "./AuthContext"; // Supposons que tu as déjà un contexte d'authentification
+import { useAuth } from "./AuthContext"; // Assure-toi que ce fichier existe aussi
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(false);
-  const { token } = useAuth(); // Récupère le token JWT depuis ton contexte d'auth
+  const { token } = useAuth();
 
-  // 📌 Récupérer le panier depuis le backend
+  // Récupérer le panier depuis le backend
   const fetchCart = async () => {
     if (!token) return;
     setLoading(true);
@@ -27,7 +27,7 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // 📌 Ajouter un produit au panier (via variantId)
+  // Ajouter un produit au panier
   const addToCart = async (variantId, quantite = 1) => {
     if (!token) return;
     setLoading(true);
@@ -49,7 +49,7 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // 📌 Supprimer un item du panier
+  // Supprimer un item du panier
   const removeFromCart = async (itemId) => {
     if (!token) return;
     setLoading(true);
@@ -68,7 +68,7 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // 📌 Vider le panier
+  // Vider le panier
   const clearCart = async () => {
     if (!token) return;
     setLoading(true);
@@ -87,7 +87,7 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // 📌 Charger le panier au montage si l'utilisateur est connecté
+  // Charger le panier au montage si l'utilisateur est connecté
   useEffect(() => {
     if (token) {
       fetchCart();

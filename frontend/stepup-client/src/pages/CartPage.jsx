@@ -1,4 +1,4 @@
-import { useCart } from "../contexts/CartContext";
+import { useCart } from "../contexts/CartContext.jsx";
 import { Link } from "react-router-dom";
 
 export const CartPage = () => {
