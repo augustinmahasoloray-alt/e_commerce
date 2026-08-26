@@ -4,6 +4,7 @@ import { Search, ShoppingCart, User, Menu, X, LayoutDashboard, Sun, Moon } from 
 import { AuthContext } from "../../contexts/AuthContext";
 import { ThemeContext } from "../../contexts/ThemeContext";
 import useScrolled from "../../hooks/useScrolled";
+import { ArrowRight } from "lucide-react";
 
 const links = [
   { to: "/", label: "Accueil" },

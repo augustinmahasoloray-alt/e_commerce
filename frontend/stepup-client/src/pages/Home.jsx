@@ -2,7 +2,6 @@ import Hero from "../components/layout/Hero";
 import Discovery from "../components/home/Discovery";
 import Categories from "../components/home/Categories";
 import FeaturedCollections from "../components/home/FeaturedCollections";
-import Products from "../components/home/Products";
 import Creators from "../components/home/Creators";
 import WhyMarketplace from "../components/home/WhyMarketplace";
 import WhySell from "../components/home/WhySell";
@@ -18,7 +17,6 @@ function Home() {
       <Discovery />
       <Categories />
       <FeaturedCollections />
-      <Products />
       <Creators />
       <WhyMarketplace />
       <WhySell />
