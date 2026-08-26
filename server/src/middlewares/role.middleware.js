@@ -5,11 +5,13 @@
 
 /**
  * Restreint l'accès à une route selon le(s) rôle(s) autorisé(s).
- * Usage : router.post("/produits", authMiddleware, requireRole("vendeur"), ...)
- *         router.get("/admin/vendeurs", authMiddleware, requireRole("admin"), ...)
- *         router.patch("/x", authMiddleware, requireRole("vendeur", "admin"), ...)
+ * Usage : requireRole("admin")
+ *         requireRole("vendeur", "admin")
+ *         requireRole(["admin"])   // tableau accepté aussi
  */
 const requireRole = (...rolesAutorises) => {
+  const roles = rolesAutorises.flat();
+
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -18,7 +20,7 @@ const requireRole = (...rolesAutorises) => {
       });
     }
 
-    if (!rolesAutorises.includes(req.user.role)) {
+    if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: "Accès refusé : rôle insuffisant",

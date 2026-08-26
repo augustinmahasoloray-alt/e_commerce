@@ -69,6 +69,14 @@
                     class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
                     Commandes
                 </button>
+                <button data-section="stats"
+                    class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
+                    Statistiques
+                </button>
+                <button data-section="users"
+                    class="nav-link w-full text-left px-4 py-2.5 rounded-md text-sm font-medium text-muted hover:bg-backgroundColor transition-colors">
+                    Clients & Vendeurs
+                </button>
             </nav>
 
             <div class="px-4 py-6 border-t border-muted/10 space-y-2">
@@ -299,6 +307,38 @@
                 </div>
             </section>
 
+            <!-- statistiques -->
+            <section id="section-stats" class="dashboard-section hidden">
+                <h2 class="font-headline text-2xl mb-6">Statistiques</h2>
+
+                <p id="statsError" class="text-sm text-red-500 hidden mb-4"></p>
+
+                <div class="bg-surfaceColor rounded-lg p-6 mb-6">
+                    <h3 class="text-sm font-medium mb-4">Évolution des ventes (30 derniers jours)</h3>
+                    <canvas id="salesEvolutionChart" height="90"></canvas>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-surfaceColor rounded-lg p-6">
+                        <h3 class="text-sm font-medium mb-4">Produits les plus vendus</h3>
+                        <canvas id="topProductsChart" height="200"></canvas>
+                        <p id="topProductsEmpty" class="text-sm text-muted text-center py-6 hidden">Aucune vente
+                            enregistrée.</p>
+                    </div>
+                    <div class="bg-surfaceColor rounded-lg p-6">
+                        <h3 class="text-sm font-medium mb-4">Catégories les plus populaires</h3>
+                        <canvas id="topCategoriesChart" height="200"></canvas>
+                        <p id="topCategoriesEmpty" class="text-sm text-muted text-center py-6 hidden">Aucune vente
+                            enregistrée.</p>
+                    </div>
+                </div>
+
+                <div class="bg-surfaceColor rounded-lg p-6">
+                    <h3 class="text-sm font-medium mb-4">Nouveaux utilisateurs (30 derniers jours)</h3>
+                    <canvas id="newUsersChart" height="90"></canvas>
+                </div>
+            </section>
+
         </main>
     </div>
 
@@ -483,6 +523,7 @@
     <script src="/admin/js/categories.js"></script>
     <script src="/admin/js/orders.js"></script>
     <script src="/admin/js/users.js"></script>
+    <script src="/admin/js/stats.js"></script>
 </body>
 
 </html>
