@@ -4,6 +4,7 @@ import {
   SlidersHorizontal, Star, Heart, Scale, Grid3x3, List,
   ChevronDown, X, Zap, Flame, AlertTriangle,
 } from "lucide-react";
+import { useCart } from "../contexts/CartContext";
 
 /**
  * StepUp — Boutique (catalogue unique, mono-vendeur)
@@ -55,8 +56,6 @@ function getBadges(product) {
   const stockTotal = getStockTotal(product);
   if (stockTotal > 0 && stockTotal <= 3) badges.push("dernierepiece");
   const reviewsCount = product._count?.reviews ?? 0;
-  // Heuristique faute de champ dédié en base : à ajuster/remplacer par un
-  // champ "is_top_vente" côté admin si tu veux un contrôle manuel.
   if (Number(product.note_moyenne) >= 4.7 && reviewsCount >= 100) badges.push("topvente");
   return badges;
 }
@@ -99,11 +98,13 @@ export default function Boutique() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // ============ Univers / catégories / marques (chargés une fois) ============
-
   const [universes, setUniverses] = useState([]); // [{ id, nom, children: [{id, nom}] }]
   const [brands, setBrands] = useState([]); // [{ id, nom, categories: [{id, nom}] }]
   const [taxonomyLoading, setTaxonomyLoading] = useState(true);
   const [taxonomyError, setTaxonomyError] = useState(null);
+
+  // 📌 Ajout du contexte du panier
+  const { addToCart, loading: cartLoading } = useCart();
 
   useEffect(() => {
     let cancelled = false;
@@ -169,7 +170,6 @@ export default function Boutique() {
   };
 
   // ============ Filtres UI ============
-
   const [sort, setSort] = useState(SORT_OPTIONS[0].value);
   const [view, setView] = useState("grid");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -182,7 +182,6 @@ export default function Boutique() {
     setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
   // ============ Produits (dépendent des filtres actifs) ============
-
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(null);
@@ -221,6 +220,14 @@ export default function Boutique() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // 📌 Fonction pour gérer l'ajout au panier
+  const handleAddToCart = (product) => {
+    const firstVariant = product.variants?.[0]?.id;
+    if (firstVariant) {
+      addToCart(firstVariant, 1);
+    }
+  };
 
   const FiltersPanel = () => (
     <>
@@ -454,8 +461,14 @@ export default function Boutique() {
                       </p>
 
                       <div className="flex items-center gap-2 mt-3">
-                        <Pill variant="primary" className="!px-4 !py-2 text-xs flex-1" disabled={stockLabel === "Rupture"}>
-                          {stockLabel === "Rupture" ? "Précommander" : "Ajouter au panier"}
+                        {/* 📌 Bouton "Ajouter au panier" corrigé */}
+                        <Pill
+                          variant="primary"
+                          className="!px-4 !py-2 text-xs flex-1"
+                          disabled={stockLabel === "Rupture" || cartLoading}
+                          onClick={() => handleAddToCart(p)}
+                        >
+                          {cartLoading ? "Ajout..." : stockLabel === "Rupture" ? "Précommander" : "Ajouter au panier"}
                         </Pill>
                         <button aria-label="Comparer" className="w-9 h-9 rounded-full border border-muted/30 flex items-center justify-center hover:border-accent hover:text-accent transition-colors shrink-0">
                           <Scale size={13} />

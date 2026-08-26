@@ -5,6 +5,7 @@ import AuthPage from "./pages/AuthPage.jsx";
 import Boutique from "./pages/Boutique.jsx";
 import VendorApply from "./pages/VendorApply.jsx";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { CartPage } from "./pages/CartPage";
 
 function App() {
   const location = useLocation();
@@ -33,6 +34,7 @@ function App() {
           <Route path="/nouveautes" element={<Navigate to="/boutique" replace />} />
           <Route path="/meilleures-ventes" element={<Navigate to="/boutique" replace />} />
           <Route path="/produits" element={<Navigate to="/boutique" replace />} />
+          <Route path="/cart" element={<CartPage />} />
         </Routes>
       </main>
 
