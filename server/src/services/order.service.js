@@ -176,3 +176,47 @@ export const getVendorOrders = async (vendorId) => {
     orderBy: { date_maj: "desc" },
   });
 };
+
+/**
+ * Change le statut de traitement d'une commande à partir de l'id de
+ * l'Order (id client-facing). En mono-vendeur, un Order n'a qu'un
+ * seul VendorOrder en pratique, donc on le retrouve et on le met à
+ * jour directement. Remplace l'usage direct de updateVendorOrderStatus
+ * quand on ne connaît que l'order_id.
+ */
+export const updateOrderStatusByOrderId = async (orderId, statut) => {
+  const vendorOrder = await prisma.vendorOrder.findFirst({
+    where: { order_id: orderId },
+  });
+
+  if (!vendorOrder) {
+    throw new Error(`Aucune commande vendeur trouvée pour la commande ${orderId}`);
+  }
+
+  return prisma.vendorOrder.update({
+    where: { id: vendorOrder.id },
+    data: { statut },
+    include: { items: true, order: true },
+  });
+};
+
+/**
+ * Listing admin de toutes les commandes, avec filtre optionnel par
+ * statut (le statut vit sur VendorOrder, pas sur Order). Retourne les
+ * Order avec leur(s) VendorOrder(s) inclus, triées par date décroissante.
+ */
+export const getAllOrdersAdmin = async ({ statut } = {}) => {
+  return prisma.order.findMany({
+    where: statut ? { vendorOrders: { some: { statut } } } : undefined,
+    include: {
+      user: { select: { id: true, nom: true, prenom: true, email: true, telephone: true } },
+      address: true,
+      vendorOrders: {
+        include: {
+          items: { include: { variant: { include: { product: true } } } },
+        },
+      },
+    },
+    orderBy: { date_commande: "desc" },
+  });
+};

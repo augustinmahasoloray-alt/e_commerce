@@ -1,5 +1,3 @@
-// js/dashboard.js
-
 let categoryChartInstance = null;
 
 function formatMontant(valeur) {

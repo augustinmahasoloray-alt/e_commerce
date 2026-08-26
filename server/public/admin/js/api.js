@@ -1,4 +1,3 @@
-// js/api.js
 // Petit wrapper autour de fetch pour le dashboard admin.
 // Ajoute automatiquement le token JWT stocké en localStorage
 // et redirige vers /admin/index.html si la session est invalide/expirée.

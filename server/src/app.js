@@ -1,4 +1,3 @@
-// app.js
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -18,6 +17,7 @@ import adminProductRoutes from "./routes/adminProduct.routes.js";
 import adminDashboardRoutes from "./routes/adminDashboard.routes.js";
 import adminCategoryRoutes from "./routes/adminCategory.routes.js";
 import adminBrandRoutes from "./routes/adminBrand.routes.js";
+import adminOrderRoutes from "./routes/adminOrder.routes.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
 
 dotenv.config();
@@ -30,8 +30,8 @@ const __dirname = path.dirname(__filename);
 // Middlewares
 app.use(
     cors({
-        origin: "http://localhost:5173", // Remplace par l'URL de ton frontend
-        credentials: true, // Pour autoriser les cookies
+        origin: "http://localhost:5173",
+        credentials: true,
     })
 );
 app.use(express.json());
@@ -52,8 +52,9 @@ app.use("/api/admin/products", adminProductRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
 app.use("/api/admin/categories", adminCategoryRoutes);
 app.use("/api/admin/brands", adminBrandRoutes);
+app.use("/api/admin/orders", adminOrderRoutes);
 
-// Middleware de gestion des erreurs — TOUJOURS en dernier, après toutes les routes
+// Middleware de gestion des erreurs
 app.use(errorMiddleware);
 
 export default app;

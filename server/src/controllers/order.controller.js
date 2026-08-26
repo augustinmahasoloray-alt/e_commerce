@@ -30,8 +30,9 @@ export const getOrder = async (req, res, next) => {
 
 export const updateOrderStatus = async (req, res, next) => {
   try {
-    const order = await orderService.updateOrderStatus(req.params.id, req.body.statut);
-    res.status(200).json({ succes: true, order });
+    // req.params.id est l'id de l'Order (id client-facing), pas du VendorOrder
+    const vendorOrder = await orderService.updateOrderStatusByOrderId(req.params.id, req.body.statut);
+    res.status(200).json({ succes: true, vendorOrder });
   } catch (error) {
     next(error);
   }
