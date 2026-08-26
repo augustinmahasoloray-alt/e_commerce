@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 function JoinUs() {
   return (
     <section className="w-full bg-[#0B0B0B] py-24 sm:py-32 px-4 sm:px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-40">
@@ -18,19 +20,19 @@ function JoinUs() {
         </p>
 
         <div className="flex flex-wrap items-center gap-4">
-          <a
-            href="/vendeur/apply"
+          <Link
+            to="/vendeur/apply"
             className="inline-flex items-center gap-2 bg-accent text-[#0B0B0B] font-body text-sm font-medium px-7 py-3.5 rounded-full hover:opacity-90 transition-opacity duration-300"
           >
             Proposer sa marque
-          </a>
+          </Link>
 
-          <a
-            href="/vendeur/apropos"
+          <Link
+            to="/boutiques"
             className="inline-flex items-center gap-2 border border-white/30 text-[#F5F5F5] font-body text-sm font-medium px-7 py-3.5 rounded-full hover:border-white transition-colors duration-300"
           >
             En savoir plus
-          </a>
+          </Link>
         </div>
       </div>
     </section>
